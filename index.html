@@ -283,16 +283,42 @@ async function handleGo(){
       if(!/^\d{4}$/.test(roomCode)){showToast('請輸入 4 位數房間號碼');document.getElementById('goBtn').disabled=false;return}
       peer=await createPeer('rummikub-'+roomCode+'-'+Date.now().toString(36));isHost=false;myId=peer.id;
       hostConn=peer.connect('rummikub-'+roomCode,{reliable:true});
-      hostConn.on('open',()=>hostConn.send({type:'join',name:myNickname,avatar:selectedAvatar,id:myId}));
-      hostConn.on('data',d=>handleHostMsg(d));hostConn.on('close',()=>showToast('與房主斷線'));
+      function sendJoin(){hostConn.send({type:'join',name:myNickname,avatar:selectedAvatar,id:myId})}
+      if(hostConn.open) sendJoin(); else hostConn.on('open',sendJoin);
+      hostConn.on('data',d=>handleHostMsg(d));hostConn.on('close',()=>showToast('與房主斷線'));hostConn.on('error',e=>console.error('Host conn error:',e));
       setTimeout(()=>{if(!hostConn||!hostConn.open){showToast('無法連線');document.getElementById('goBtn').disabled=false}},8000);
       showWaitingRoom();
     }
   }catch(e){showToast(e.message||'連線失敗');document.getElementById('goBtn').disabled=false}
 }
 
-function handleNewConn(conn){conn.on('open',()=>{conn.on('data',data=>{if(data.type==='join'){if(gameState.phase!=='lobby'){conn.send({type:'error',msg:'遊戲已開始'});return}if(gameState.players.length>=4){conn.send({type:'error',msg:'房間已滿'});return}gameState.players.push({id:data.id,name:data.name,avatar:data.avatar,hand:[],hasBrokenIce:false,connected:true,isAI:false});connections[data.id]=conn;broadcastLobby();renderPL()}else if(data.type==='gameAction'){const pi=gameState.players.findIndex(p=>connections[p.id]===conn);if(pi>=0)doAction(pi,data)}});conn.on('close',()=>{const p=gameState.players.find(pl=>connections[pl.id]===conn);if(p)p.connected=false;broadcastLobby()})})}
-
+function handleNewConn(conn){
+  function setupDataHandler(){
+    conn.on('data',data=>{
+      if(data.type==='join'){
+        if(gameState.phase!=='lobby'){conn.send({type:'error',msg:'遊戲已開始'});return}
+        if(gameState.players.length>=4){conn.send({type:'error',msg:'房間已滿'});return}
+        // Prevent duplicate joins
+        if(gameState.players.some(p=>p.id===data.id))return;
+        gameState.players.push({id:data.id,name:data.name,avatar:data.avatar,hand:[],hasBrokenIce:false,connected:true,isAI:false});
+        connections[data.id]=conn;
+        broadcastLobby();renderPL();
+      }else if(data.type==='gameAction'){
+        const pi=gameState.players.findIndex(p=>connections[p.id]===conn);
+        if(pi>=0)doAction(pi,data);
+      }
+    });
+    conn.on('close',()=>{const p=gameState.players.find(pl=>connections[pl.id]===conn);if(p)p.connected=false;broadcastLobby()});
+  }
+  // Connection may already be open when the 'connection' event fires
+  if(conn.open){
+    setupDataHandler();
+  } else {
+    conn.on('open',()=>setupDataHandler());
+  }
+  // Also handle error
+  conn.on('error',err=>console.error('Conn error:',err));
+}
 function broadcastLobby(){const d={type:'lobbyUpdate',players:gameState.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,connected:p.connected,isAI:p.isAI})),roomCode};Object.values(connections).forEach(c=>{if(c.open)c.send(d)});renderPL()}
 function broadcastGS(){gameState.players.forEach((p,i)=>{if(p.isAI)return;const c=connections[p.id];if(c&&c.open)c.send({type:'gameState',state:sanState(i)})});if(isHost||isSoloMode)renderGame(sanState(myPlayerIndex))}
 function sanState(pi){return{phase:gameState.phase,players:gameState.players.map((p,i)=>({id:p.id,name:p.name,avatar:p.avatar,handCount:p.hand.length,hasBrokenIce:p.hasBrokenIce,connected:p.connected,isAI:p.isAI,hand:i===pi?p.hand:undefined})),table:gameState.table,poolCount:gameState.pool.length,currentTurn:gameState.currentTurn,myIndex:pi}}
