@@ -60,12 +60,12 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .table-sets{display:flex;flex-wrap:wrap;gap:12px;padding:5px;min-height:80px}
 .table-set{display:flex;gap:3px;padding:6px 8px;background:rgba(255,255,255,.65);border-radius:12px;border:2px solid rgba(255,155,94,.15);align-items:center;animation:tilePlace .3s ease;cursor:pointer;transition:border-color .2s}
 .table-set:hover{border-color:var(--accent-orange)}
-.table-set.selected-set{border-color:var(--accent-orange);outline:3px solid var(--accent-orange);outline-offset:-1px}
+.table-set.selected-set{border-color:var(--accent-green);outline:3px solid var(--accent-green);outline-offset:-1px}
 .table-set.invalid{border-color:#E8564A;background:rgba(232,86,74,.1)}
 .empty-table-msg{display:flex;align-items:center;justify-content:center;width:100%;min-height:80px;color:var(--text-light);font-size:.9rem;font-weight:600;opacity:.6}
 .tile{width:38px;height:52px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:1.15rem;font-family:'Nunito',sans-serif;background:#fff;border:2px solid rgba(92,64,51,.12);box-shadow:0 2px 6px rgba(92,64,51,.1);cursor:pointer;user-select:none;transition:transform .15s,box-shadow .15s;position:relative;flex-shrink:0}
 .tile:hover{transform:translateY(-3px);box-shadow:0 5px 12px rgba(92,64,51,.2)}
-.tile.selected{transform:translateY(-6px);box-shadow:0 8px 20px rgba(255,155,94,.4);border-color:var(--accent-orange)}
+.tile.selected{transform:translateY(-6px);box-shadow:0 8px 20px rgba(126,206,138,.4);border-color:var(--accent-green)}
 .tile .tile-num{line-height:1}.tile .tile-dots{font-size:.35rem;letter-spacing:1px;margin-top:2px}
 .tile[data-color="red"] .tile-num{color:var(--tile-red)}
 .tile[data-color="blue"] .tile-num{color:var(--tile-blue)}
@@ -83,7 +83,7 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .tile[data-color="mirror"]{background:#fff;border-color:rgba(230,170,40,.3)}
 .tile[data-color="mirror"] .joker-svg{width:28px;height:28px}
 .tile[data-color="mirror"] .tile-label{font-size:.45rem;color:#D4940A;font-weight:800;margin-top:1px}
-.tile.table-tile-selected{border-color:var(--tile-joker);box-shadow:0 0 12px rgba(196,74,232,.4);transform:translateY(-4px)}
+.tile.table-tile-selected{border-color:var(--accent-green);box-shadow:0 0 12px rgba(126,206,138,.5);transform:translateY(-4px)}
 .hand-area{background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-top:2px solid rgba(255,155,94,.2);padding:8px 10px;flex-shrink:0}
 .hand-controls{display:flex;gap:4px;margin-bottom:8px;align-items:center;justify-content:space-between}
 .btn-group{display:flex;gap:4px;align-items:center}
@@ -120,7 +120,7 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .timer-bar{height:6px;background:var(--accent-green);border-radius:3px;transition:width 1s linear;margin:0}
 .timer-bar.warning{background:var(--accent-yellow)}.timer-bar.danger{background:var(--tile-red);animation:timerPulse .5s infinite}
 @keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.6}}
-.turn-banner{display:none;align-items:center;justify-content:center;padding:10px 15px;background:linear-gradient(135deg,rgba(255,155,94,.15),rgba(255,177,194,.15));border-bottom:2px solid rgba(255,155,94,.2);font-weight:800;font-size:.95rem;color:var(--accent-orange);gap:8px;animation:turnBannerIn .4s ease}
+.turn-banner{display:none;align-items:center;justify-content:center;padding:8px 15px;background:linear-gradient(135deg,rgba(126,206,138,.12),rgba(126,206,138,.06));border-top:2px solid rgba(126,206,138,.25);font-weight:800;font-size:.9rem;color:var(--accent-green);gap:8px;animation:turnBannerIn .4s ease;flex-shrink:0}
 .turn-banner.show{display:flex}
 .turn-banner .turn-pulse{display:inline-block;animation:turnPulseAnim 1.2s infinite}
 @keyframes turnBannerIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
@@ -191,11 +191,11 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
       <div class="pool-count" id="poolCount">牌堆: 112</div>
     </div>
   </div>
-  <div class="turn-banner" id="turnBanner"><span class="turn-pulse">🎯</span><span>換你出牌了！</span></div>
   <div class="opponents-bar" id="opponentsBar"></div>
   <div class="table-area" id="tableArea">
     <div class="table-sets" id="tableSets"><div class="empty-table-msg">桌面上還沒有牌組，出牌開始遊戲吧！</div></div>
   </div>
+  <div class="turn-banner" id="turnBanner"><span class="turn-pulse">🎯</span><span>換你出牌了！</span></div>
   <div class="timer-bar" id="timerBar" style="width:100%"></div>
   <div class="hand-area">
     <div class="hand-controls">
@@ -647,73 +647,116 @@ function isRunTwist(set){
 }
 
 function isRunColorChange(set){
-  // Color-change joker connects two different colored segments of a run
-  // Tiles before CC must be one color, tiles after must be different color
+  // Color-change joker sits at a specific position in the run.
+  // Left side = one color, right side = different color.
+  // The CC joker itself represents one number in the sequence.
+  // Cannot extend beyond 1 or 13.
   const ccIdx=[];set.forEach((t,i)=>{if(t.color==='colorchange')ccIdx.push(i)});
-  if(ccIdx.length===0) return false;
-  // Simple case: one CC joker
-  if(ccIdx.length===1){
-    const ci=ccIdx[0];
-    const left=set.slice(0,ci).filter(t=>!isJokerType(t));
-    const right=set.slice(ci+1).filter(t=>!isJokerType(t));
-    if(!left.length||!right.length) return set.length>=3; // flexible
-    const lc=left[0].color,rc=right[0].color;
-    if(lc===rc) return false; // must change color
-    for(const t of left) if(t.color!==lc) return false;
-    for(const t of right) if(t.color!==rc) return false;
-    // Numbers must form a consecutive sequence
-    const allNums=set.filter(t=>!isJokerType(t)).map(t=>t.number).sort((a,b)=>a-b);
-    for(let i=1;i<allNums.length;i++) if(allNums[i]===allNums[i-1]) return false;
-    const jokerSlots=set.filter(t=>t.color==='joker').length+set.filter(t=>t.color==='double').length*2+1;
-    const totalLen=allNums.length+jokerSlots;
-    if(totalLen<3) return false;
-    const mn=allNums[0],mx=allNums[allNums.length-1];
-    return mx-mn+1<=totalLen&&mx<=13&&mn>=1;
+  if(ccIdx.length!==1) return false; // exactly one CC supported
+  const ci=ccIdx[0];
+  const leftTiles=set.slice(0,ci);
+  const rightTiles=set.slice(ci+1);
+  if(!leftTiles.length||!rightTiles.length) return false; // must have tiles on both sides
+  // Filter non-joker tiles on each side
+  const leftNJ=leftTiles.filter(t=>!isJokerType(t));
+  const rightNJ=rightTiles.filter(t=>!isJokerType(t));
+  if(!leftNJ.length||!rightNJ.length) return set.length>=3;
+  // Each side must be single color, and different from each other
+  const lc=leftNJ[0].color,rc=rightNJ[0].color;
+  if(lc===rc) return false;
+  for(const t of leftNJ) if(t.color!==lc) return false;
+  for(const t of rightNJ) if(t.color!==rc) return false;
+  // Build the full number sequence: left tiles + CC slot + right tiles
+  // Each position in the set represents one number (including CC and regular jokers)
+  // Determine numbers: leftTiles occupy positions, then CC occupies 1, then rightTiles
+  const leftNums=leftNJ.map(t=>t.number).sort((a,b)=>a-b);
+  const rightNums=rightNJ.map(t=>t.number).sort((a,b)=>a-b);
+  // Check no duplicates
+  for(let i=1;i<leftNums.length;i++) if(leftNums[i]===leftNums[i-1]) return false;
+  for(let i=1;i<rightNums.length;i++) if(rightNums[i]===rightNums[i-1]) return false;
+  // The total length of the run = set.length, each tile/joker fills exactly one number slot
+  // (except double joker fills 2, but let's keep it simple: no double in CC runs for now)
+  const totalSlots=set.length;
+  // Try to find a valid starting number
+  const allNums=[...leftNums,...rightNums].sort((a,b)=>a-b);
+  for(let start=Math.max(1,allNums[0]);start>=Math.max(1,allNums[allNums.length-1]-totalSlots+1);start--){
+    const end=start+totalSlots-1;
+    if(end>13||start<1) continue;
+    // Check all non-joker tiles fit into [start..end]
+    let valid=true;
+    const slots=new Set();
+    for(let n=start;n<=end;n++) slots.add(n);
+    for(const n of allNums){if(!slots.has(n)){valid=false;break}slots.delete(n)}
+    if(!valid) continue;
+    // Check left tiles are before CC position and right tiles are after
+    const ccNum=start+ci; // the number the CC occupies
+    for(const n of leftNums) if(n>=ccNum){valid=false;break}
+    if(!valid) continue;
+    for(const n of rightNums) if(n<=ccNum){valid=false;break}
+    if(valid) return true;
   }
-  return false; // Multiple CC jokers — simplified
+  return false;
 }
 
 function isGroupMirror(set){
   // Mirror joker in group: left side mirrors right side
+  // e.g., red7, blue7, Mirror, blue7, red7
   const mi=set.findIndex(t=>t.color==='mirror');
   if(mi<0) return false;
   const left=set.slice(0,mi);const right=set.slice(mi+1);
   if(left.length===0||right.length===0) return false;
   if(left.length!==right.length) return false;
-  // Each side must be valid part of a group (same number, different colors)
-  const ln=left.filter(t=>!isJokerType(t));const rn=right.filter(t=>!isJokerType(t));
-  if(ln.length===0&&rn.length===0) return left.length>=1;
-  const num=(ln[0]||rn[0]).number;
-  for(const t of [...ln,...rn]) if(t.number!==num) return false;
-  // Colors should not repeat across both sides
-  const allColors=new Set();
-  for(const t of [...ln,...rn]){if(allColors.has(t.color))return false;allColors.add(t.color)}
+  // All non-joker tiles must have same number
+  const allNJ=[...left,...right].filter(t=>!isJokerType(t));
+  if(!allNJ.length) return set.length>=3;
+  const num=allNJ[0].number;
+  for(const t of allNJ) if(t.number!==num) return false;
+  // Right side colors must mirror left side (reversed order)
+  for(let i=0;i<left.length;i++){
+    const lt=left[i],rt=right[right.length-1-i];
+    if(!isJokerType(lt)&&!isJokerType(rt)){
+      if(lt.color!==rt.color) return false;
+    }
+  }
+  // No duplicate colors on one side
+  const leftColors=left.filter(t=>!isJokerType(t)).map(t=>t.color);
+  if(new Set(leftColors).size!==leftColors.length) return false;
   return set.length>=3;
 }
 
 function isRunMirror(set){
   // Mirror joker in run: left side numbers mirror right side
+  // e.g., red3,red4,red5,Mirror,red5,red4,red3
   const mi=set.findIndex(t=>t.color==='mirror');
   if(mi<0) return false;
   const left=set.slice(0,mi);const right=set.slice(mi+1);
   if(left.length===0||right.length===0) return false;
   if(left.length!==right.length) return false;
-  // Both sides should be same color
-  const allNJ=[...left,...right].filter(t=>!isJokerType(t));
+  // Both sides must be same color (all non-joker tiles)
+  const leftNJ=left.filter(t=>!isJokerType(t));
+  const rightNJ=right.filter(t=>!isJokerType(t));
+  const allNJ=[...leftNJ,...rightNJ];
   if(!allNJ.length) return set.length>=3;
   const col=allNJ[0].color;
   for(const t of allNJ) if(t.color!==col) return false;
-  // Left numbers in ascending, right must mirror (descending = same sequence reversed)
-  const lnums=left.filter(t=>!isJokerType(t)).map(t=>t.number);
-  const rnums=right.filter(t=>!isJokerType(t)).map(t=>t.number);
-  // The sequence should be symmetric around the mirror
-  // e.g., 3,4,5,Mirror,5,4,3
-  const reversed=[...rnums].reverse();
-  for(let i=0;i<Math.min(lnums.length,reversed.length);i++){
-    if(lnums[i]!==reversed[i]) return false;
+  // Left should be ascending consecutive, right should be descending (mirror)
+  // Get numbers in positional order
+  const lnums=left.map(t=>isJokerType(t)?null:t.number);
+  const rnums=right.map(t=>isJokerType(t)?null:t.number);
+  // Right should be reverse of left
+  for(let i=0;i<left.length;i++){
+    const li=lnums[i];
+    const ri=rnums[right.length-1-i]; // mirror position
+    if(li!==null&&ri!==null&&li!==ri) return false;
   }
-  // Check consecutive
-  if(lnums.length>=2){for(let i=1;i<lnums.length;i++)if(lnums[i]!==lnums[i-1]+1)return false}
+  // Check left forms consecutive sequence
+  const lreal=lnums.filter(n=>n!==null);
+  if(lreal.length>=2){
+    const sorted=[...lreal].sort((a,b)=>a-b);
+    for(let i=1;i<sorted.length;i++) if(sorted[i]!==sorted[i-1]+1) return false;
+  }
+  // All numbers must be in range 1-13
+  for(const n of [...lreal,...rnums.filter(n=>n!==null)]) if(n<1||n>13) return false;
   return set.length>=3;
 }
 
