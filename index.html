@@ -94,8 +94,6 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .tile.borrowed::after{content:'↩';position:absolute;top:-2px;right:-2px;font-size:.5rem;background:var(--accent-blue);color:#fff;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;line-height:1}
 .tile.just-drawn{animation:drawnPulse 2s ease-out forwards;border-color:var(--accent-green);box-shadow:0 0 12px rgba(126,206,138,.6)}
 @keyframes drawnPulse{0%{box-shadow:0 0 16px rgba(126,206,138,.8);border-color:var(--accent-green)}70%{box-shadow:0 0 8px rgba(126,206,138,.4);border-color:var(--accent-green)}100%{box-shadow:0 2px 6px rgba(92,64,51,.1);border-color:rgba(92,64,51,.12)}}
-.tile.last-played{animation:lastPlayedGlow 3s ease-out forwards}
-@keyframes lastPlayedGlow{0%{box-shadow:0 0 12px rgba(255,155,94,.7);border-color:var(--accent-orange)}70%{box-shadow:0 0 8px rgba(255,155,94,.4);border-color:var(--accent-orange)}100%{box-shadow:0 2px 6px rgba(92,64,51,.1);border-color:rgba(92,64,51,.12)}}
 .hand-tiles{display:flex;gap:4px;overflow-x:auto;padding:5px 2px;min-height:62px;align-items:center;-webkit-overflow-scrolling:touch}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(92,64,51,.9);color:#fff;padding:10px 24px;border-radius:14px;font-weight:700;font-size:.9rem;z-index:999;opacity:0;transition:all .3s;pointer-events:none;text-align:center;max-width:90vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -109,8 +107,17 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .score-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,155,94,.1)}
 .score-row:last-child{border:none}.score-row .sr-avatar{font-size:1.3rem}.score-row .sr-name{flex:1;font-weight:700}.score-row .sr-pts{font-weight:800}
 .sr-pts.positive{color:var(--accent-green)}.sr-pts.negative{color:var(--tile-red)}
-.timer-bar{height:4px;background:var(--accent-green);border-radius:2px;transition:width 1s linear}
-.timer-bar.warning{background:var(--accent-yellow)}.timer-bar.danger{background:var(--tile-red)}
+.timer-bar{height:6px;background:var(--accent-green);border-radius:3px;transition:width 1s linear;margin:0}
+.timer-bar.warning{background:var(--accent-yellow)}.timer-bar.danger{background:var(--tile-red);animation:timerPulse .5s infinite}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.turn-banner{display:none;align-items:center;justify-content:center;padding:10px 15px;background:linear-gradient(135deg,rgba(255,155,94,.15),rgba(255,177,194,.15));border-bottom:2px solid rgba(255,155,94,.2);font-weight:800;font-size:.95rem;color:var(--accent-orange);gap:8px;animation:turnBannerIn .4s ease}
+.turn-banner.show{display:flex}
+.turn-banner .turn-pulse{display:inline-block;animation:turnPulseAnim 1.2s infinite}
+@keyframes turnBannerIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes turnPulseAnim{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.tile.last-played{box-shadow:0 0 10px rgba(255,155,94,.6);border-color:var(--accent-orange)}
+.tile.my-played{box-shadow:0 0 10px rgba(126,206,138,.6);border-color:var(--accent-green)}
+.tile.my-played::before{content:'✦';position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:.5rem;color:var(--accent-green)}
 .ai-thinking{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.92);backdrop-filter:blur(8px);padding:18px 32px;border-radius:18px;box-shadow:var(--card-shadow);font-weight:700;color:var(--accent-orange);z-index:50;display:none;align-items:center;gap:10px}
 .ai-thinking.show{display:flex}
 .ai-thinking .dots{display:inline-flex;gap:4px}
@@ -174,11 +181,12 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
       <div class="pool-count" id="poolCount">牌堆: 106</div>
     </div>
   </div>
-  <div class="timer-bar" id="timerBar" style="width:100%"></div>
+  <div class="turn-banner" id="turnBanner"><span class="turn-pulse">🎯</span><span>換你出牌了！</span></div>
   <div class="opponents-bar" id="opponentsBar"></div>
   <div class="table-area" id="tableArea">
     <div class="table-sets" id="tableSets"><div class="empty-table-msg">桌面上還沒有牌組，出牌開始遊戲吧！</div></div>
   </div>
+  <div class="timer-bar" id="timerBar" style="width:100%"></div>
   <div class="hand-area">
     <div class="hand-controls">
       <div class="btn-group"><button class="ctrl-btn" onclick="playSelected()">出牌</button><button class="ctrl-btn" onclick="addToExistingSet()">加入牌組</button><button class="ctrl-btn" onclick="splitFromSet()">取牌</button><button class="ctrl-btn" onclick="replaceJoker()">換鬼牌</button></div>
@@ -217,6 +225,8 @@ let mqttClient=null; // MQTT WebSocket client
 let gameState=null,myPlayerIndex=-1,selectedTiles=new Set(),selectedTableTiles=[],turnBackup=null,hasMeldedThisTurn=false;
 let turnTimer=null,turnTimeLeft=120,currentViewState=null,selectedTableSet=-1;
 let borrowedTileIds=new Set(),lastPlayedTileIds=new Set(),lastPlayedTimeout=null,lastDrawnTileId=null;
+let myPlayedTileIds=new Set(); // tiles I placed on table this turn (for green highlight)
+let turnBackupSnapshot=new Set(); // table tile IDs at start of my turn (for non-host tracking)
 const TURN_TIME=120;
 
 // ===== MQTT NETWORKING =====
@@ -433,7 +443,7 @@ function startGame(){
 }
 
 // ===== GAME LOGIC =====
-function saveTurnBackup(){turnBackup=JSON.parse(JSON.stringify({table:gameState.table,hands:gameState.players.map(p=>p.hand.map(t=>({...t})))}));hasMeldedThisTurn=false}
+function saveTurnBackup(){turnBackup=JSON.parse(JSON.stringify({table:gameState.table,hands:gameState.players.map(p=>p.hand.map(t=>({...t})))}));hasMeldedThisTurn=false;myPlayedTileIds=new Set()}
 
 function processMeld(pi,indices,tsi){
   if(gameState.currentTurn!==pi){sendTP(pi,{type:'toast',msg:'不是你的回合'});return}
@@ -539,8 +549,7 @@ function autoSortTableSets(){
 function computeLastPlayedTiles(){
   const oldIds=new Set();if(turnBackup)turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
   lastPlayedTileIds=new Set();gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))lastPlayedTileIds.add(t.id)}));
-  if(lastPlayedTimeout)clearTimeout(lastPlayedTimeout);
-  lastPlayedTimeout=setTimeout(()=>{lastPlayedTileIds=new Set();if(currentViewState)renderTable(currentViewState.table)},3000);
+  // No timeout — persists until next turn change clears it
 }
 
 function valAll(){return gameState.table.every(s=>valSet(s))}
@@ -615,33 +624,58 @@ function renderGame(state){
   if(state.currentTurn!==lastRenderedTurn){
     const prevTurn=lastRenderedTurn;
     lastRenderedTurn=state.currentTurn;
+    // Clear my-played highlights from previous turn
+    myPlayedTileIds=new Set();
     if(!isHost&&!isSoloMode){
       hasMeldedThisTurn=false;borrowedTileIds=new Set();
-      // Detect newly placed tiles on table (by comparing with previous snapshot)
+      // Save snapshot of table at turn start for tracking my played tiles
+      if(state.currentTurn===state.myIndex){
+        turnBackupSnapshot=new Set();
+        (state.table||[]).forEach(s=>(s||[]).forEach(t=>turnBackupSnapshot.add(t.id)));
+      }
+      // Detect newly placed tiles on table by previous player
       if(prevTurn>=0){
         const newTableIds=new Set();
         (state.table||[]).forEach(s=>(s||[]).forEach(t=>newTableIds.add(t.id)));
         lastPlayedTileIds=new Set();
         newTableIds.forEach(id=>{if(!prevTableTileIds.has(id))lastPlayedTileIds.add(id)});
-        if(lastPlayedTileIds.size>0){
-          if(lastPlayedTimeout)clearTimeout(lastPlayedTimeout);
-          lastPlayedTimeout=setTimeout(()=>{lastPlayedTileIds=new Set();if(currentViewState)renderTable(currentViewState.table)},3000);
-        }
       }
+    }
+    // For host: lastPlayedTileIds is set by computeLastPlayedTiles, clear on NEXT turn change
+    if(isHost||isSoloMode){
+      // lastPlayedTileIds was set at end of previous turn, keep it — it will be cleared on the NEXT turn change
     }
     // Update snapshot
     prevTableTileIds=new Set();
     (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
-  } else if(!isHost&&!isSoloMode){
-    // Not a turn change — update snapshot silently for next comparison
-    prevTableTileIds=new Set();
-    (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
+  } else {
+    // Not a turn change
+    if(!isHost&&!isSoloMode){
+      prevTableTileIds=new Set();
+      (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
+      // Track tiles I'm placing this turn
+      if(state.currentTurn===state.myIndex&&hasMeldedThisTurn){
+        const startIds=new Set();if(turnBackupSnapshot)turnBackupSnapshot.forEach(id=>startIds.add(id));
+        myPlayedTileIds=new Set();
+        (state.table||[]).forEach(s=>(s||[]).forEach(t=>{if(!startIds.has(t.id))myPlayedTileIds.add(t.id)}));
+      }
+    }
+    // For host: track tiles I'm placing this turn by comparing with turnBackup
+    if((isHost||isSoloMode)&&state.currentTurn===state.myIndex&&turnBackup){
+      const oldIds=new Set();turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
+      myPlayedTileIds=new Set();
+      gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))myPlayedTileIds.add(t.id)}));
+    }
   }
   const tp=state.players[state.currentTurn];
   document.getElementById('turnAvatar').textContent=AVATARS[tp.avatar];
   document.getElementById('turnName').textContent=tp.name+(tp.isAI?' 🤖':'');
   document.getElementById('poolCount').textContent='牌堆: '+state.poolCount;
-  document.querySelector('.game-header .turn-info').style.color=state.currentTurn===state.myIndex?'var(--accent-orange)':'var(--text-dark)';
+  const isMyTurn=state.currentTurn===state.myIndex;
+  document.querySelector('.game-header .turn-info').style.color=isMyTurn?'var(--accent-orange)':'var(--text-dark)';
+  // Turn banner
+  const banner=document.getElementById('turnBanner');
+  banner.classList.toggle('show',isMyTurn&&!tp.isAI);
   const ob=document.getElementById('opponentsBar');ob.innerHTML='';
   state.players.forEach((p,i)=>{if(i===state.myIndex)return;const c=document.createElement('div');c.className='opponent-card'+(i===state.currentTurn?' active-turn':'');c.innerHTML=`<span class="opp-avatar">${AVATARS[p.avatar]}</span><span>${p.name}${p.isAI?' 🤖':''}</span><span class="tile-count">${p.handCount} 張</span>`;ob.appendChild(c)});
   // Preserve local sort order for ALL players (sort is display-only, never modifies gameState)
@@ -666,8 +700,7 @@ function renderGame(state){
     localHandOrder=hand.map(t=>t.id);
   }
   renderTable(state.table);renderHand(hand);
-  const my=state.currentTurn===state.myIndex;
-  document.querySelectorAll('.ctrl-btn').forEach(b=>{if(b.classList.contains('sort-btn'))return;b.disabled=!my});
+  document.querySelectorAll('.ctrl-btn').forEach(b=>{if(b.classList.contains('sort-btn'))return;b.disabled=!isMyTurn});
   updateMainBtn();
 }
 function renderTable(table){
@@ -677,7 +710,7 @@ function renderTable(table){
   table.forEach((set,si)=>{
     const d=document.createElement('div');d.className='table-set'+(si===selectedTableSet?' selected-set':'');d.dataset.setIndex=si;
     if(!valSet(set))d.classList.add('invalid');
-    set.forEach((t,ti)=>{const el=mkTile(t);if(lastPlayedTileIds.has(t.id))el.classList.add('last-played');el.onclick=e=>{e.stopPropagation();selectTableTile(si,ti,el)};if(selectedTableTiles.some(x=>x.si===si&&x.ti===ti))el.classList.add('table-tile-selected');d.appendChild(el)});
+    set.forEach((t,ti)=>{const el=mkTile(t);if(lastPlayedTileIds.has(t.id))el.classList.add('last-played');if(myPlayedTileIds.has(t.id))el.classList.add('my-played');el.onclick=e=>{e.stopPropagation();selectTableTile(si,ti,el)};if(selectedTableTiles.some(x=>x.si===si&&x.ti===ti))el.classList.add('table-tile-selected');d.appendChild(el)});
     d.onclick=()=>{document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));d.classList.add('selected-set');selectedTableSet=si};
     c.appendChild(d);
   });
