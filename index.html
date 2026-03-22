@@ -300,6 +300,19 @@ function handleJoinRequest(data){
 function handleRemoteAction(data){
   const pi=gameState.players.findIndex(p=>p.id===data.playerId);
   if(pi<0)return;
+  // Convert tileIds to tileIndices on host side
+  if(data.action==='meld'&&data.tileIds&&!data.tileIndices){
+    const hand=gameState.players[pi].hand;
+    const indices=data.tileIds.map(id=>hand.findIndex(t=>t.id===id)).filter(i=>i>=0);
+    if(indices.length!==data.tileIds.length)return; // safety check
+    data.tileIndices=indices;
+  }
+  if(data.action==='replaceJoker'&&data.tileId!==undefined&&data.handTileIndex===undefined){
+    const hand=gameState.players[pi].hand;
+    const idx=hand.findIndex(t=>t.id===data.tileId);
+    if(idx<0)return;
+    data.handTileIndex=idx;
+  }
   doAction(pi,data);
 }
 
@@ -593,8 +606,14 @@ function resetTurnTimer(){turnTimeLeft=TURN_TIME;updateTimerBar()}
 function updateTimerBar(){const b=document.getElementById('timerBar');if(!b)return;const p=(turnTimeLeft/TURN_TIME)*100;b.style.width=p+'%';b.className='timer-bar'+(p<20?' danger':p<40?' warning':'')}
 
 // ===== RENDER =====
+let lastRenderedTurn=-1;
 function renderGame(state){
   currentViewState=state;myPlayerIndex=state.myIndex;
+  // Detect turn change — reset local state for non-host
+  if(state.currentTurn!==lastRenderedTurn){
+    lastRenderedTurn=state.currentTurn;
+    if(!isHost&&!isSoloMode){hasMeldedThisTurn=false;borrowedTileIds=new Set()}
+  }
   const tp=state.players[state.currentTurn];
   document.getElementById('turnAvatar').textContent=AVATARS[tp.avatar];
   document.getElementById('turnName').textContent=tp.name+(tp.isAI?' 🤖':'');
@@ -602,7 +621,23 @@ function renderGame(state){
   document.querySelector('.game-header .turn-info').style.color=state.currentTurn===state.myIndex?'var(--accent-orange)':'var(--text-dark)';
   const ob=document.getElementById('opponentsBar');ob.innerHTML='';
   state.players.forEach((p,i)=>{if(i===state.myIndex)return;const c=document.createElement('div');c.className='opponent-card'+(i===state.currentTurn?' active-turn':'');c.innerHTML=`<span class="opp-avatar">${AVATARS[p.avatar]}</span><span>${p.name}${p.isAI?' 🤖':''}</span><span class="tile-count">${p.handCount} 張</span>`;ob.appendChild(c)});
-  renderTable(state.table);renderHand(state.players[state.myIndex].hand||[]);
+  // Preserve local sort order for non-host players
+  let hand=state.players[state.myIndex].hand||[];
+  if(!isHost&&!isSoloMode&&localHandOrder.length>0&&hand.length>0){
+    // Re-sort hand according to local order, put new tiles at end
+    const orderMap=new Map(localHandOrder.map((id,i)=>([id,i])));
+    const sorted=[...hand].sort((a,b)=>{
+      const ai=orderMap.has(a.id)?orderMap.get(a.id):99999;
+      const bi=orderMap.has(b.id)?orderMap.get(b.id):99999;
+      return ai-bi;
+    });
+    hand=sorted;
+    state.players[state.myIndex].hand=hand;
+    localHandOrder=hand.map(t=>t.id);
+  } else if(hand.length>0){
+    localHandOrder=hand.map(t=>t.id);
+  }
+  renderTable(state.table);renderHand(hand);
   const my=state.currentTurn===state.myIndex;
   document.querySelectorAll('.ctrl-btn').forEach(b=>{if(b.classList.contains('sort-btn'))return;b.disabled=!my});
   updateMainBtn();
@@ -631,16 +666,69 @@ function mkTile(tile){const el=document.createElement('div');el.className='tile'
 function clearAllSelections(){selectedTiles.clear();selectedTableTiles=[];selectedTableSet=-1;document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));document.querySelectorAll('.tile.table-tile-selected').forEach(t=>t.classList.remove('table-tile-selected'))}
 function clearAllSelectionsAndBorrowed(){clearAllSelections();borrowedTileIds=new Set()}
 
-function sortHand(by){if(!currentViewState)return;const hand=currentViewState.players[myPlayerIndex].hand;if(!hand)return;if(by==='color')hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});else hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});clearAllSelections();renderHand(hand);if(isHost||isSoloMode)gameState.players[myPlayerIndex].hand=hand}
-function playSelected(){if(!selectedTiles.size){showToast('請先選取要出的牌');return}const idx=Array.from(selectedTiles).sort((a,b)=>a-b);clearAllSelections();sendAction({action:'meld',tileIndices:idx})}
-function addToExistingSet(){if(!selectedTiles.size){showToast('請先選取牌');return}if(selectedTableSet<0){showToast('請先點擊桌面牌組');return}const idx=Array.from(selectedTiles).sort((a,b)=>a-b);const tsi=selectedTableSet;clearAllSelections();sendAction({action:'meld',tileIndices:idx,targetSetIndex:tsi})}
-function splitFromSet(){if(!selectedTableTiles.length){showToast('請先點擊桌面牌組中要取出的牌');return}const si=selectedTableTiles[0].si;const positions=selectedTableTiles.filter(x=>x.si===si).map(x=>x.ti);clearAllSelections();sendAction({action:'splitTake',setIndex:si,tilePositions:positions})}
-function replaceJoker(){if(selectedTiles.size!==1){showToast('請選取手牌中 1 張牌來替換鬼牌');return}if(!selectedTableTiles.length){showToast('請點擊桌面上要替換的鬼牌');return}const jt=selectedTableTiles[0];const hi=Array.from(selectedTiles)[0];clearAllSelections();sendAction({action:'replaceJoker',handTileIndex:hi,setIndex:jt.si,jokerPos:jt.ti})}
+function sortHand(by){
+  if(!currentViewState)return;
+  const hand=currentViewState.players[myPlayerIndex].hand;if(!hand)return;
+  if(by==='color')hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});
+  else hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
+  clearAllSelections();renderHand(hand);
+  if(isHost||isSoloMode)gameState.players[myPlayerIndex].hand=hand;
+  // For non-host: save local sort order so we can map tile IDs correctly
+  localHandOrder=hand.map(t=>t.id);
+}
+
+// Local hand order tracking for non-host players
+let localHandOrder=[];
+
+function getSelectedTileIds(){
+  // Get tile IDs from selected hand indices using currentViewState
+  const hand=currentViewState?.players?.[myPlayerIndex]?.hand;
+  if(!hand)return[];
+  return Array.from(selectedTiles).map(i=>hand[i]?.id).filter(Boolean);
+}
+
+function playSelected(){
+  if(!selectedTiles.size){showToast('請先選取要出的牌');return}
+  if(isHost||isSoloMode){
+    const idx=Array.from(selectedTiles).sort((a,b)=>a-b);clearAllSelections();sendAction({action:'meld',tileIndices:idx});
+  }else{
+    const tileIds=getSelectedTileIds();clearAllSelections();
+    hasMeldedThisTurn=true;updateMainBtn();
+    mqttSend({type:'gameAction',playerId:myId,action:'meld',tileIds});
+  }
+}
+function addToExistingSet(){
+  if(!selectedTiles.size){showToast('請先選取牌');return}if(selectedTableSet<0){showToast('請先點擊桌面牌組');return}
+  if(isHost||isSoloMode){
+    const idx=Array.from(selectedTiles).sort((a,b)=>a-b);const tsi=selectedTableSet;clearAllSelections();sendAction({action:'meld',tileIndices:idx,targetSetIndex:tsi});
+  }else{
+    const tileIds=getSelectedTileIds();const tsi=selectedTableSet;clearAllSelections();
+    hasMeldedThisTurn=true;updateMainBtn();
+    mqttSend({type:'gameAction',playerId:myId,action:'meld',tileIds,targetSetIndex:tsi});
+  }
+}
+function splitFromSet(){
+  if(!selectedTableTiles.length){showToast('請先點擊桌面牌組中要取出的牌');return}
+  const si=selectedTableTiles[0].si;const positions=selectedTableTiles.filter(x=>x.si===si).map(x=>x.ti);clearAllSelections();
+  if(isHost||isSoloMode)sendAction({action:'splitTake',setIndex:si,tilePositions:positions});
+  else{hasMeldedThisTurn=true;updateMainBtn();mqttSend({type:'gameAction',playerId:myId,action:'splitTake',setIndex:si,tilePositions:positions})}
+}
+function replaceJoker(){
+  if(selectedTiles.size!==1){showToast('請選取手牌中 1 張牌來替換鬼牌');return}if(!selectedTableTiles.length){showToast('請點擊桌面上要替換的鬼牌');return}
+  const jt=selectedTableTiles[0];
+  if(isHost||isSoloMode){
+    const hi=Array.from(selectedTiles)[0];clearAllSelections();sendAction({action:'replaceJoker',handTileIndex:hi,setIndex:jt.si,jokerPos:jt.ti});
+  }else{
+    const tileIds=getSelectedTileIds();clearAllSelections();
+    hasMeldedThisTurn=true;updateMainBtn();
+    mqttSend({type:'gameAction',playerId:myId,action:'replaceJoker',tileId:tileIds[0],setIndex:jt.si,jokerPos:jt.ti});
+  }
+}
 function drawTile(){clearAllSelections();sendAction({action:'draw'})}
 function endTurn(){clearAllSelections();sendAction({action:'endTurn'})}
 function mainBtnClick(){if(hasMeldedThisTurn)endTurn();else drawTile()}
 function updateMainBtn(){const btn=document.getElementById('mainBtn');if(!btn)return;if(hasMeldedThisTurn){btn.textContent='結束回合 ✓';btn.className='ctrl-btn main-btn end-mode'}else{btn.textContent='摸牌';btn.className='ctrl-btn main-btn draw-mode'}}
-function undoTurn(){clearAllSelectionsAndBorrowed();sendAction({action:'undo'})}
+function undoTurn(){clearAllSelectionsAndBorrowed();hasMeldedThisTurn=false;updateMainBtn();sendAction({action:'undo'})}
 
 function sendAction(a){
   if(isHost||isSoloMode) doAction(myPlayerIndex,a);
