@@ -139,11 +139,31 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .rules-hint:hover{background:#fff}
 .rules-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:20px}
 .rules-modal.show{display:flex}
-.rules-content{background:#fff;border-radius:20px;padding:25px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.rules-content{background:#fff;border-radius:20px;padding:25px;max-width:540px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.2)}
 .rules-content h3{color:var(--accent-orange);margin:12px 0 6px;font-size:1rem}
 .rules-content h3:first-child{margin-top:0}
 .rules-content p{font-size:.85rem;line-height:1.6;color:var(--text-dark);margin-bottom:8px}
 .rules-content .close-rules{margin-top:15px}
+.tile-inventory{margin:10px 0}
+.tile-inv-section{margin-bottom:12px}
+.tile-inv-label{font-size:.8rem;font-weight:700;color:var(--text-light);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.tile-inv-label .inv-count{background:var(--accent-yellow);color:var(--text-dark);padding:1px 8px;border-radius:8px;font-size:.7rem}
+.tile-inv-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px}
+.mini-tile{width:26px;height:34px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;font-family:'Nunito',sans-serif;background:#fff;border:1.5px solid rgba(92,64,51,.12);box-shadow:0 1px 3px rgba(92,64,51,.08)}
+.mini-tile .mt-num{line-height:1}
+.mini-tile[data-c="red"] .mt-num{color:var(--tile-red)}
+.mini-tile[data-c="blue"] .mt-num{color:var(--tile-blue)}
+.mini-tile[data-c="yellow"] .mt-num{color:var(--tile-yellow)}
+.mini-tile[data-c="black"] .mt-num{color:var(--tile-black)}
+.mini-tile.mt-joker{border-color:rgba(232,86,74,.3)}
+.mini-tile.mt-joker .mt-num{color:var(--tile-red);font-size:.55rem}
+.mini-tile.mt-double{border-color:rgba(74,143,232,.3)}
+.mini-tile.mt-double .mt-num{color:var(--tile-blue);font-size:.55rem}
+.mini-tile.mt-cc{border-color:rgba(60,60,60,.3);background:linear-gradient(to right,#fff 50%,#2a2a2a 50%)}
+.mini-tile.mt-cc .mt-num{color:#555;font-size:.55rem}
+.mini-tile.mt-mirror{border-color:rgba(230,170,40,.3)}
+.mini-tile.mt-mirror .mt-num{color:#D4940A;font-size:.55rem}
+.tile-inv-total{text-align:center;font-weight:800;font-size:.95rem;color:var(--accent-orange);padding:8px;background:var(--bg-cream);border-radius:12px;margin-top:8px}
 @media(max-width:500px){.logo-title{font-size:2.5rem}.lobby-card{padding:20px}.tile{width:34px;height:46px;font-size:1rem}.avatar-btn{font-size:1.8rem}.room-code-display .code{font-size:2rem}.tab-btn{font-size:.75rem;padding:8px 4px}.ctrl-btn{padding:5px 8px;font-size:.72rem}}
 .loading-dots::after{content:'';animation:dots 1.5s steps(4) infinite}
 @keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
@@ -216,19 +236,71 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 <div class="rules-modal" id="rulesModal" onclick="if(event.target===this)toggleRules()">
   <div class="rules-content">
     <h3>🎯 遊戲目標</h3><p>最先將手牌全部出完的玩家獲勝。</p>
-    <h3>🃏 牌組組成</h3><p>104 張數字牌（紅、藍、黃、黑各 1-13 兩套）+ 8 張鬼牌，共 112 張。每人起始 14 張。</p>
-    <h3>🧊 破冰規則</h3><p>首次出牌（破冰）時，出的牌點數總和必須 ≥ 30 點。破冰必須全部使用手牌，不能使用桌面上的牌。</p>
-    <h3>📋 出牌方式</h3><p><b>群組</b>：3-4 張同數字不同顏色的牌。<b>順組</b>：3 張以上同色連續數字的牌。</p>
-    <h3>🔄 桌面重組</h3><p>破冰後，你可以拆分、重組桌面上任何牌組，只要回合結束時所有牌組都是合法的即可。</p>
-    <h3>🃏 鬼牌規則</h3><p>Joker 可替代任何牌。可用手牌替換桌上的 Joker，但取回的 Joker 必須在同一回合搭配至少 2 張手牌組成新牌組。手中 Joker 算 30 點罰分。</p>
-    <h3>🌀 特殊鬼牌</h3>
-    <p><b>⏩ 藍色雙人百搭</b>：代表 2 個連續數字（順組）或 2 個不同顏色（群組），破冰算兩張牌點數。不可放 12 後或 2 前。</p>
-    <p><b>⬛ 黑白變色百搭</b>：僅用於順組，連接兩段不同顏色的連續數字。</p>
-    <p><b>🟡 黃色鏡射百搭</b>：放在中間，左右須完全對稱鏡像。點數值 0，罰分 30。</p>
-    <p><i>特殊鬼牌不能替代普通百搭或其他特殊鬼牌。</i></p>
-    <h3>⏱ 時間限制</h3><p>每回合 2 分鐘。超時自動撤銷並摸牌。</p>
-    <h3>⚠️ 操作失敗懲罰</h3><p>桌面有無效牌組時，還原操作並罰抽 3 張牌。</p>
-    <h3>🏁 結束與計分</h3><p>勝者得所有敗者手牌點數為正分，敗者各得負分。牌堆用盡且無人出完，手牌最低者勝。</p>
+
+    <h3>🃏 全部牌組一覽（共 112 張）</h3>
+    <div class="tile-inventory">
+      <div class="tile-inv-section">
+        <div class="tile-inv-label"><span style="color:var(--tile-red)">● 紅色</span> <span class="inv-count">× 26 張</span> <span style="font-size:.7rem;color:var(--text-light)">1-13 各兩張</span></div>
+        <div class="tile-inv-row" id="invRed"></div>
+      </div>
+      <div class="tile-inv-section">
+        <div class="tile-inv-label"><span style="color:var(--tile-blue)">● 藍色</span> <span class="inv-count">× 26 張</span></div>
+        <div class="tile-inv-row" id="invBlue"></div>
+      </div>
+      <div class="tile-inv-section">
+        <div class="tile-inv-label"><span style="color:var(--tile-yellow)">● 黃色</span> <span class="inv-count">× 26 張</span></div>
+        <div class="tile-inv-row" id="invYellow"></div>
+      </div>
+      <div class="tile-inv-section">
+        <div class="tile-inv-label"><span style="color:var(--tile-black)">● 黑色</span> <span class="inv-count">× 26 張</span></div>
+        <div class="tile-inv-row" id="invBlack"></div>
+      </div>
+      <div class="tile-inv-section">
+        <div class="tile-inv-label">🌀 鬼牌 <span class="inv-count">× 8 張</span></div>
+        <div class="tile-inv-row">
+          <div class="mini-tile mt-joker"><span class="mt-num">百搭</span></div>
+          <div class="mini-tile mt-joker"><span class="mt-num">百搭</span></div>
+          <div class="mini-tile mt-double"><span class="mt-num">雙人</span></div>
+          <div class="mini-tile mt-double"><span class="mt-num">雙人</span></div>
+          <div class="mini-tile mt-cc"><span class="mt-num">變色</span></div>
+          <div class="mini-tile mt-cc"><span class="mt-num">變色</span></div>
+          <div class="mini-tile mt-mirror"><span class="mt-num">鏡射</span></div>
+          <div class="mini-tile mt-mirror"><span class="mt-num">鏡射</span></div>
+        </div>
+      </div>
+      <div class="tile-inv-total">數字牌 104 張 ＋ 鬼牌 8 張 ＝ 共 112 張</div>
+    </div>
+
+    <h3>🧊 破冰規則</h3><p>首次出牌點數總和必須 ≥ 30 點，只能使用手牌，不能使用桌面上的牌。</p>
+    <h3>📋 出牌方式</h3>
+    <p><b>群組</b>：3-4 張同數字、不同顏色的牌（如：紅7 藍7 黑7）</p>
+    <p><b>順組</b>：3 張以上同色、連續數字的牌（如：紅5 紅6 紅7 紅8）</p>
+    <h3>🔄 桌面重組</h3><p>破冰後可拆分、重組桌面上任何牌組，只要回合結束時所有牌組都合法即可。從桌面取回的牌會標記藍色 ↩，結束前必須放回。</p>
+
+    <h3>🔴 紅色百搭 × 2</h3>
+    <p>可替代任何一張牌。可用對應的手牌替換桌面上的百搭，取回後必須在同一回合搭配 2 張手牌出掉。手中罰分 30 點。</p>
+
+    <h3>🔵 藍色雙人百搭 × 2</h3>
+    <p><b>順組</b>：代表 2 個同色連續數字。例如 黑5 黑6 黑7 黑8 黑9 <b>雙人</b> 黑12 → 雙人代表黑10+黑11。</p>
+    <p><b>群組</b>：代表 2 個不同顏色的同數字牌。</p>
+    <p>⚠️ 代表的 2 個數字必須相鄰，不能跳號。不可放在 12 之後或 2 之前。破冰算兩張牌點數。罰分 30 點。</p>
+
+    <h3>⬛ 黑白變色百搭 × 2</h3>
+    <p><b>只能用於順組</b>。將順組分為前後兩段不同顏色，自身佔一個數字位置。</p>
+    <p>例：紅3 紅4 <b>變色</b> 藍6 藍7 → 變色佔位置 5。前後顏色必須不同。罰分 30 點。</p>
+
+    <h3>🟡 黃色鏡射百搭 × 2</h3>
+    <p>放在牌組正中間，左右必須完全對稱鏡像。</p>
+    <p>順組例：紅3 紅4 紅5 <b>鏡射</b> 紅5 紅4 紅3</p>
+    <p>群組例：紅7 藍7 <b>鏡射</b> 藍7 紅7</p>
+    <p>點數值 0（破冰不算分），但手中罰分 30 點。</p>
+
+    <p style="margin-top:10px"><i>⚠️ 特殊鬼牌不能替代普通百搭或其他特殊鬼牌，也不能被手牌替換取回。</i></p>
+
+    <h3>⏱ 時間與懲罰</h3>
+    <p>每回合 2 分鐘。超時自動撤銷並摸 1 張。桌面有無效牌組時，還原操作並罰抽 3 張。</p>
+    <h3>🏁 結束與計分</h3>
+    <p>勝者得所有敗者手牌點數總和（正分），敗者各得自己手牌點數（負分）。所有鬼牌罰分 30 點。牌堆用盡且無人出完時，手牌點數最低者勝。</p>
     <button class="btn-primary close-rules" onclick="toggleRules()">關閉</button>
   </div>
 </div>
@@ -1070,6 +1142,21 @@ function showWinner(data){
 }
 
 initAvatars();
+
+// Populate tile inventory in rules modal
+(function(){
+  const colorMap={red:'invRed',blue:'invBlue',yellow:'invYellow',black:'invBlack'};
+  for(const [col,elId] of Object.entries(colorMap)){
+    const row=document.getElementById(elId);if(!row)continue;
+    for(let n=1;n<=13;n++){
+      for(let s=0;s<2;s++){
+        const t=document.createElement('div');t.className='mini-tile';t.dataset.c=col;
+        t.innerHTML=`<span class="mt-num">${n}</span>`;
+        row.appendChild(t);
+      }
+    }
+  }
+})();
 
 // Warn before leaving during active game
 window.addEventListener('beforeunload',function(e){
