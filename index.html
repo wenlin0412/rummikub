@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>拉密 Rummikub - 可愛線上桌遊</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--bg-warm:#FFF0E1;--bg-peach:#FFDCC5;--bg-cream:#FFF8F0;--accent-orange:#FF9B5E;--accent-yellow:#FFD166;--accent-green:#7ECE8A;--accent-pink:#FFB5C2;--accent-blue:#89C4E1;--text-dark:#5C4033;--text-light:#A0826D;--card-shadow:0 4px 12px rgba(92,64,51,.15);--tile-red:#E8564A;--tile-blue:#4A8FE8;--tile-yellow:#E8B84A;--tile-black:#3A3A3A;--tile-joker:#C44AE8}
@@ -41,8 +41,7 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .room-code-display .hint{font-size:.8rem;color:var(--text-light);margin-top:4px}
 .player-list{margin:15px 0}
 .player-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-cream);border-radius:12px;margin-bottom:6px;animation:slideUp .3s ease}
-.player-item .avatar{font-size:1.5rem}
-.player-item .name{font-weight:700;flex:1}
+.player-item .avatar{font-size:1.5rem}.player-item .name{font-weight:700;flex:1}
 .player-item .host-badge,.player-item .ai-badge{font-size:.7rem;padding:2px 8px;border-radius:8px;font-weight:700}
 .player-item .host-badge{background:var(--accent-yellow);color:var(--text-dark)}
 .player-item .ai-badge{background:var(--accent-blue);color:#fff}
@@ -67,8 +66,7 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .tile{width:38px;height:52px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:1.15rem;font-family:'Nunito',sans-serif;background:#fff;border:2px solid rgba(92,64,51,.12);box-shadow:0 2px 6px rgba(92,64,51,.1);cursor:pointer;user-select:none;transition:transform .15s,box-shadow .15s;position:relative;flex-shrink:0}
 .tile:hover{transform:translateY(-3px);box-shadow:0 5px 12px rgba(92,64,51,.2)}
 .tile.selected{transform:translateY(-6px);box-shadow:0 8px 20px rgba(255,155,94,.4);border-color:var(--accent-orange)}
-.tile .tile-num{line-height:1}
-.tile .tile-dots{font-size:.35rem;letter-spacing:1px;margin-top:2px}
+.tile .tile-num{line-height:1}.tile .tile-dots{font-size:.35rem;letter-spacing:1px;margin-top:2px}
 .tile[data-color="red"] .tile-num{color:var(--tile-red)}
 .tile[data-color="blue"] .tile-num{color:var(--tile-blue)}
 .tile[data-color="yellow"] .tile-num{color:var(--tile-yellow)}
@@ -82,10 +80,8 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .btn-group+.btn-group{border-left:2px solid rgba(255,155,94,.2);margin-left:2px}
 .ctrl-btn{padding:6px 12px;border:2px solid rgba(255,155,94,.3);border-radius:12px;background:var(--bg-cream);font-family:inherit;font-weight:700;font-size:.78rem;cursor:pointer;transition:all .2s;color:var(--text-dark)}
 .ctrl-btn:hover{background:var(--accent-orange);color:#fff;border-color:var(--accent-orange)}
-.ctrl-btn.danger{border-color:rgba(232,86,74,.3)}
-.ctrl-btn.danger:hover{background:var(--tile-red);border-color:var(--tile-red)}
+.ctrl-btn.danger{border-color:rgba(232,86,74,.3)}.ctrl-btn.danger:hover{background:var(--tile-red);border-color:var(--tile-red)}
 .ctrl-btn:disabled{opacity:.4;cursor:not-allowed}
-.ctrl-btn.active-mode{background:var(--accent-orange);color:#fff;border-color:var(--accent-orange)}
 .ctrl-btn.sort-btn{background:rgba(137,196,225,.15);border-color:rgba(137,196,225,.4);color:var(--accent-blue)}
 .ctrl-btn.sort-btn:hover{background:var(--accent-blue);color:#fff;border-color:var(--accent-blue)}
 .ctrl-btn.end-turn-btn{background:linear-gradient(135deg,var(--accent-green),#5ebb6e);color:#fff;border-color:var(--accent-green);font-size:.85rem;padding:6px 16px}
@@ -108,15 +104,10 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .winner-msg{font-size:1.1rem;color:var(--text-light);margin-bottom:20px}
 .scores-table{background:#fff;border-radius:16px;padding:15px 20px;margin:15px 0;box-shadow:var(--card-shadow)}
 .score-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,155,94,.1)}
-.score-row:last-child{border:none}
-.score-row .sr-avatar{font-size:1.3rem}
-.score-row .sr-name{flex:1;font-weight:700}
-.score-row .sr-pts{font-weight:800}
-.sr-pts.positive{color:var(--accent-green)}
-.sr-pts.negative{color:var(--tile-red)}
+.score-row:last-child{border:none}.score-row .sr-avatar{font-size:1.3rem}.score-row .sr-name{flex:1;font-weight:700}.score-row .sr-pts{font-weight:800}
+.sr-pts.positive{color:var(--accent-green)}.sr-pts.negative{color:var(--tile-red)}
 .timer-bar{height:4px;background:var(--accent-green);border-radius:2px;transition:width 1s linear}
-.timer-bar.warning{background:var(--accent-yellow)}
-.timer-bar.danger{background:var(--tile-red)}
+.timer-bar.warning{background:var(--accent-yellow)}.timer-bar.danger{background:var(--tile-red)}
 .ai-thinking{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.92);backdrop-filter:blur(8px);padding:18px 32px;border-radius:18px;box-shadow:var(--card-shadow);font-weight:700;color:var(--accent-orange);z-index:50;display:none;align-items:center;gap:10px}
 .ai-thinking.show{display:flex}
 .ai-thinking .dots{display:inline-flex;gap:4px}
@@ -133,11 +124,7 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .rules-content h3:first-child{margin-top:0}
 .rules-content p{font-size:.85rem;line-height:1.6;color:var(--text-dark);margin-bottom:8px}
 .rules-content .close-rules{margin-top:15px}
-@media(max-width:500px){
-  .logo-title{font-size:2.5rem}.lobby-card{padding:20px}.tile{width:34px;height:46px;font-size:1rem}
-  .avatar-btn{font-size:1.8rem}.room-code-display .code{font-size:2rem}.tab-btn{font-size:.75rem;padding:8px 4px}
-  .ctrl-btn{padding:5px 8px;font-size:.72rem}
-}
+@media(max-width:500px){.logo-title{font-size:2.5rem}.lobby-card{padding:20px}.tile{width:34px;height:46px;font-size:1rem}.avatar-btn{font-size:1.8rem}.room-code-display .code{font-size:2rem}.tab-btn{font-size:.75rem;padding:8px 4px}.ctrl-btn{padding:5px 8px;font-size:.72rem}}
 .loading-dots::after{content:'';animation:dots 1.5s steps(4) infinite}
 @keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
 </style>
@@ -191,55 +178,32 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
   </div>
   <div class="hand-area">
     <div class="hand-controls">
-      <div class="btn-group">
-        <button class="ctrl-btn sort-btn" id="sortColorBtn" onclick="sortHand('color')">按色排序</button>
-        <button class="ctrl-btn sort-btn" id="sortNumBtn" onclick="sortHand('number')">按數排序</button>
-      </div>
-      <div class="btn-group">
-        <button class="ctrl-btn" onclick="playSelected()">出牌</button>
-        <button class="ctrl-btn" onclick="addToExistingSet()">加入牌組</button>
-        <button class="ctrl-btn" id="splitBtn" onclick="splitFromSet()">取牌</button>
-        <button class="ctrl-btn" id="replJokerBtn" onclick="replaceJoker()">換鬼牌</button>
-      </div>
-      <div class="btn-group">
-        <button class="ctrl-btn" onclick="drawTile()">摸牌</button>
-        <button class="ctrl-btn danger" onclick="undoTurn()">撤銷</button>
-      </div>
-      <div class="btn-group">
-        <button class="ctrl-btn end-turn-btn" onclick="endTurn()">結束回合 ✓</button>
-      </div>
+      <div class="btn-group"><button class="ctrl-btn sort-btn" id="sortColorBtn" onclick="sortHand('color')">按色排序</button><button class="ctrl-btn sort-btn" id="sortNumBtn" onclick="sortHand('number')">按數排序</button></div>
+      <div class="btn-group"><button class="ctrl-btn" onclick="playSelected()">出牌</button><button class="ctrl-btn" onclick="addToExistingSet()">加入牌組</button><button class="ctrl-btn" id="splitBtn" onclick="splitFromSet()">取牌</button><button class="ctrl-btn" id="replJokerBtn" onclick="replaceJoker()">換鬼牌</button></div>
+      <div class="btn-group"><button class="ctrl-btn" onclick="drawTile()">摸牌</button><button class="ctrl-btn danger" onclick="undoTurn()">撤銷</button></div>
+      <div class="btn-group"><button class="ctrl-btn end-turn-btn" onclick="endTurn()">結束回合 ✓</button></div>
     </div>
     <div class="hand-tiles" id="handTiles"></div>
   </div>
 </div>
 
-<div class="winner-overlay" id="winnerOverlay">
-  <div class="winner-box">
-    <div class="winner-emoji" id="winnerEmoji"></div>
-    <div class="winner-name" id="winnerName"></div>
-    <div class="winner-msg" id="winnerMsg">恭喜獲勝！</div>
-    <div class="scores-table" id="scoresTable"></div>
-    <button class="btn-primary" style="max-width:300px;margin:0 auto" onclick="location.reload()">回到大廳</button>
-  </div>
-</div>
+<div class="winner-overlay" id="winnerOverlay"><div class="winner-box">
+  <div class="winner-emoji" id="winnerEmoji"></div><div class="winner-name" id="winnerName"></div>
+  <div class="winner-msg" id="winnerMsg">恭喜獲勝！</div><div class="scores-table" id="scoresTable"></div>
+  <button class="btn-primary" style="max-width:300px;margin:0 auto" onclick="location.reload()">回到大廳</button>
+</div></div>
 
 <div class="rules-modal" id="rulesModal" onclick="if(event.target===this)toggleRules()">
   <div class="rules-content">
     <h3>🎯 遊戲目標</h3><p>最先將手牌全部出完的玩家獲勝。</p>
     <h3>🃏 牌組組成</h3><p>104 張數字牌（紅、藍、黃、黑各 1-13 兩套）+ 2 張鬼牌（Joker），共 106 張。每人起始 14 張。</p>
-    <h3>🧊 破冰規則</h3><p>首次出牌（破冰）時，出的牌點數總和必須 ≥ 30 點。破冰必須全部使用手牌，不能使用桌面上的牌。Joker 在破冰時算它所代表的牌的點數。</p>
-    <h3>📋 出牌方式</h3>
-    <p><b>群組</b>：3-4 張同數字不同顏色的牌（如：紅7 藍7 黑7）</p>
-    <p><b>順組</b>：3 張以上同色連續數字的牌（如：紅7 紅8 紅9）</p>
-    <h3>🔄 桌面重組</h3><p>破冰後，你可以拆分、重組桌面上任何牌組，只要回合結束時所有牌組都是合法的即可。你可以從牌組中取牌，搭配手牌組成新牌組。</p>
-    <h3>🃏 鬼牌規則</h3>
-    <p>Joker 可替代任何牌。你可以用手牌中對應的牌替換桌上的 Joker，但取回的 Joker 必須在同一回合搭配至少 2 張手牌組成新牌組，不能留在手中。</p>
-    <p>手中持有 Joker 在遊戲結束時算 30 點罰分。</p>
-    <h3>⏱ 時間限制</h3><p>每回合 2 分鐘。超時將自動撤銷操作並摸 1 張牌。</p>
-    <h3>⚠️ 操作失敗懲罰</h3><p>若回合結束時桌面有無效牌組，必須還原所有操作，收回出的牌，並額外從牌堆抽 3 張牌作為懲罰。</p>
-    <h3>🏁 結束與計分</h3>
-    <p>首先出完手牌者喊「Rummikub！」獲勝。敗者手牌點數為負分（Joker = 30 點），勝者得到所有敗者負分的總和為正分。</p>
-    <p>若牌堆用盡且無人出完，則手牌點數最低者獲勝。</p>
+    <h3>🧊 破冰規則</h3><p>首次出牌（破冰）時，出的牌點數總和必須 ≥ 30 點。破冰必須全部使用手牌，不能使用桌面上的牌。</p>
+    <h3>📋 出牌方式</h3><p><b>群組</b>：3-4 張同數字不同顏色的牌。<b>順組</b>：3 張以上同色連續數字的牌。</p>
+    <h3>🔄 桌面重組</h3><p>破冰後，你可以拆分、重組桌面上任何牌組，只要回合結束時所有牌組都是合法的即可。</p>
+    <h3>🃏 鬼牌規則</h3><p>Joker 可替代任何牌。可用手牌替換桌上的 Joker，但取回的 Joker 必須在同一回合搭配至少 2 張手牌組成新牌組。手中 Joker 算 30 點罰分。</p>
+    <h3>⏱ 時間限制</h3><p>每回合 2 分鐘。超時自動撤銷並摸牌。</p>
+    <h3>⚠️ 操作失敗懲罰</h3><p>桌面有無效牌組時，還原操作並罰抽 3 張牌。</p>
+    <h3>🏁 結束與計分</h3><p>勝者得所有敗者手牌點數為正分，敗者各得負分。牌堆用盡且無人出完，手牌最低者勝。</p>
     <button class="btn-primary close-rules" onclick="toggleRules()">關閉</button>
   </div>
 </div>
@@ -247,83 +211,166 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 <script>
 const AVATARS=['🐱','🐶','🐰','🐻','🦊','🐼','🐨','🦁'],COLORS=['red','blue','yellow','black'],AI_NAMES=['小花','阿呆','球球','豆豆','奶茶','糰子','麻糬'];
 let mode='solo',selectedAvatar=0,myId='',myNickname='',roomCode='',isHost=false,isSoloMode=false,aiDifficulty='normal';
-let peer=null,connections={},hostConn=null;
+let mqttClient=null; // MQTT WebSocket client
 let gameState=null,myPlayerIndex=-1,selectedTiles=new Set(),selectedTableTiles=[],turnBackup=null,hasMeldedThisTurn=false;
 let turnTimer=null,turnTimeLeft=120,currentViewState=null,selectedTableSet=-1;
-let borrowedTileIds=new Set(); // tile IDs taken from table this turn
-let lastPlayedTileIds=new Set(); // tile IDs played by previous player (for 3s highlight)
-let lastPlayedTimeout=null;
-let lastDrawnTileId=null; // tile ID just drawn (for scroll + highlight)
+let borrowedTileIds=new Set(),lastPlayedTileIds=new Set(),lastPlayedTimeout=null,lastDrawnTileId=null;
 const TURN_TIME=120;
 
+// ===== MQTT NETWORKING =====
+const MQTT_BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
+let currentBrokerIdx=0;
+
+function mqttTopic(){return 'rummikub-game/'+roomCode}
+function mqttTopicDM(targetId){return 'rummikub-game/'+roomCode+'/dm/'+targetId}
+
+function connectMQTT(){
+  return new Promise((resolve,reject)=>{
+    myId='player-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const url=MQTT_BROKERS[currentBrokerIdx];
+    const client=mqtt.connect(url,{
+      clientId:'rmk-'+myId,
+      clean:true,
+      connectTimeout:8000,
+      keepalive:30,
+      reconnectPeriod:3000
+    });
+    client.on('connect',()=>{
+      // Subscribe to room broadcast + my DM channel
+      client.subscribe([mqttTopic(),mqttTopicDM(myId)],{qos:0},err=>{
+        if(err)reject(err); else resolve(client);
+      });
+    });
+    client.on('error',e=>{
+      console.error('MQTT error:',e);
+      // Try next broker
+      if(currentBrokerIdx<MQTT_BROKERS.length-1){
+        currentBrokerIdx++;client.end(true);
+        connectMQTT().then(resolve).catch(reject);
+      } else reject(e);
+    });
+    client.on('message',(topic,msg)=>{
+      try{
+        const data=JSON.parse(msg.toString());
+        if(data._from===myId) return; // Ignore own messages
+        handleMQTTMessage(topic,data);
+      }catch(e){}
+    });
+    mqttClient=client;
+  });
+}
+
+function mqttSend(data){
+  if(!mqttClient||!mqttClient.connected) return;
+  mqttClient.publish(mqttTopic(),JSON.stringify({...data,_from:myId}),{qos:0});
+}
+
+function mqttSendDM(targetId,data){
+  if(!mqttClient||!mqttClient.connected) return;
+  mqttClient.publish(mqttTopicDM(targetId),JSON.stringify({...data,_from:myId}),{qos:0});
+}
+
+function handleMQTTMessage(topic,data){
+  if(isHost){
+    // Host receives join requests and game actions
+    if(data.type==='join') handleJoinRequest(data);
+    else if(data.type==='gameAction') handleRemoteAction(data);
+    else if(data.type==='ping') handlePing(data);
+  } else {
+    // Client receives state updates
+    if(data.type==='lobbyUpdate') renderPLData(data.players);
+    else if(data.type==='gameState'&&data.targetId===myId) renderGame(data.state);
+    else if(data.type==='toast'&&data.targetId===myId) showToast(data.msg);
+    else if(data.type==='gameStart'&&data.targetId===myId){myPlayerIndex=data.myIndex;document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';}
+    else if(data.type==='gameOver') showWinner(data);
+    else if(data.type==='pong'&&data.targetId===myId){/* connection alive */}
+  }
+}
+
+function handleJoinRequest(data){
+  if(gameState.phase!=='lobby'){mqttSendDM(data.playerId,{type:'toast',msg:'遊戲已開始'});return}
+  if(gameState.players.length>=4){mqttSendDM(data.playerId,{type:'toast',msg:'房間已滿'});return}
+  if(gameState.players.some(p=>p.id===data.playerId)) return;
+  gameState.players.push({id:data.playerId,name:data.name,avatar:data.avatar,hand:[],hasBrokenIce:false,connected:true,isAI:false});
+  broadcastLobby();renderPL();
+}
+
+function handleRemoteAction(data){
+  const pi=gameState.players.findIndex(p=>p.id===data.playerId);
+  if(pi<0)return;
+  doAction(pi,data);
+}
+
+function handlePing(data){
+  mqttSendDM(data.playerId,{type:'pong',targetId:data.playerId});
+}
+
+// ===== BROADCAST FUNCTIONS =====
+function broadcastLobby(){
+  const d={type:'lobbyUpdate',players:gameState.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,connected:p.connected,isAI:p.isAI})),roomCode};
+  mqttSend(d);renderPL();
+}
+
+function broadcastGS(){
+  gameState.players.forEach((p,i)=>{
+    if(p.isAI) return;
+    if(p.id===myId){renderGame(sanState(i));return}
+    // Send personalized state via DM
+    mqttSendDM(p.id,{type:'gameState',targetId:p.id,state:sanState(i)});
+  });
+}
+
+function sanState(pi){return{phase:gameState.phase,players:gameState.players.map((p,i)=>({id:p.id,name:p.name,avatar:p.avatar,handCount:p.hand.length,hasBrokenIce:p.hasBrokenIce,connected:p.connected,isAI:p.isAI,hand:i===pi?p.hand:undefined})),table:gameState.table,poolCount:gameState.pool.length,currentTurn:gameState.currentTurn,myIndex:pi}}
+
+function sendTP(pi,data){
+  if(gameState.players[pi].isAI)return;
+  const p=gameState.players[pi];
+  if(p.id===myId){if(data.type==='toast')showToast(data.msg);return}
+  mqttSendDM(p.id,{...data,targetId:p.id});
+}
+
+// ===== UI HELPERS =====
 function toggleRules(){document.getElementById('rulesModal').classList.toggle('show')}
-
 function initAvatars(){const g=document.getElementById('avatarGrid');AVATARS.forEach((a,i)=>{const b=document.createElement('button');b.className='avatar-btn'+(i===0?' selected':'');b.textContent=a;b.onclick=()=>{document.querySelectorAll('.avatar-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedAvatar=i};g.appendChild(b)})}
-
 function setMode(m){mode=m;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));document.getElementById('soloOptions').style.display=m==='solo'?'block':'none';document.getElementById('joinField').style.display=m==='join'?'block':'none';document.getElementById('goBtn').textContent=m==='solo'?'開始單人遊戲':m==='host'?'建立房間':'加入房間'}
-
 function showToast(msg,dur=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),dur)}
 function genCode(){return String(Math.floor(1000+Math.random()*9000))}
 
-function createPeer(id){return new Promise((res,rej)=>{const p=new Peer(id,{config:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]}});p.on('open',()=>res(p));p.on('error',e=>rej(e.type==='unavailable-id'?new Error('房間號碼已被使用'):e))})}
-
+// ===== MAIN ENTRY =====
 async function handleGo(){
   myNickname=document.getElementById('nicknameInput').value.trim();
   if(!myNickname){showToast('請輸入暱稱');return}
   document.getElementById('goBtn').disabled=true;
   if(mode==='solo'){startSoloGame();return}
-  document.getElementById('statusMsg').textContent='連線中...';
+
+  document.getElementById('statusMsg').textContent='正在連線到伺服器...';
   try{
     if(mode==='host'){
-      roomCode=genCode();peer=await createPeer('rummikub-'+roomCode);isHost=true;myId=peer.id;myPlayerIndex=0;
+      roomCode=genCode();
+      await connectMQTT();
+      isHost=true;myPlayerIndex=0;
       gameState={phase:'lobby',players:[{id:myId,name:myNickname,avatar:selectedAvatar,hand:[],hasBrokenIce:false,connected:true,isAI:false}],table:[],pool:[],currentTurn:0};
-      showWaitingRoom();peer.on('connection',c=>handleNewConn(c));
+      showWaitingRoom();
     }else{
       roomCode=document.getElementById('roomCodeInput').value.trim();
       if(!/^\d{4}$/.test(roomCode)){showToast('請輸入 4 位數房間號碼');document.getElementById('goBtn').disabled=false;return}
-      peer=await createPeer('rummikub-'+roomCode+'-'+Date.now().toString(36));isHost=false;myId=peer.id;
-      hostConn=peer.connect('rummikub-'+roomCode,{reliable:true});
-      function sendJoin(){hostConn.send({type:'join',name:myNickname,avatar:selectedAvatar,id:myId})}
-      if(hostConn.open) sendJoin(); else hostConn.on('open',sendJoin);
-      hostConn.on('data',d=>handleHostMsg(d));hostConn.on('close',()=>showToast('與房主斷線'));hostConn.on('error',e=>console.error('Host conn error:',e));
-      setTimeout(()=>{if(!hostConn||!hostConn.open){showToast('無法連線');document.getElementById('goBtn').disabled=false}},8000);
+      await connectMQTT();
+      isHost=false;
+      // Send join request
+      mqttSend({type:'join',playerId:myId,name:myNickname,avatar:selectedAvatar});
       showWaitingRoom();
+      // Retry join in case of timing
+      setTimeout(()=>mqttSend({type:'join',playerId:myId,name:myNickname,avatar:selectedAvatar}),2000);
+      // Ping to check host exists
+      mqttSend({type:'ping',playerId:myId});
+      setTimeout(()=>{
+        if(document.getElementById('waitingCard').style.display!=='none'&&!document.getElementById('playerList').children.length){
+          showToast('未收到房主回應，請確認房間號碼');
+        }
+      },6000);
     }
-  }catch(e){showToast(e.message||'連線失敗');document.getElementById('goBtn').disabled=false}
+  }catch(e){showToast('連線失敗，請重試');document.getElementById('goBtn').disabled=false;console.error(e)}
 }
-
-function handleNewConn(conn){
-  function setupDataHandler(){
-    conn.on('data',data=>{
-      if(data.type==='join'){
-        if(gameState.phase!=='lobby'){conn.send({type:'error',msg:'遊戲已開始'});return}
-        if(gameState.players.length>=4){conn.send({type:'error',msg:'房間已滿'});return}
-        // Prevent duplicate joins
-        if(gameState.players.some(p=>p.id===data.id))return;
-        gameState.players.push({id:data.id,name:data.name,avatar:data.avatar,hand:[],hasBrokenIce:false,connected:true,isAI:false});
-        connections[data.id]=conn;
-        broadcastLobby();renderPL();
-      }else if(data.type==='gameAction'){
-        const pi=gameState.players.findIndex(p=>connections[p.id]===conn);
-        if(pi>=0)doAction(pi,data);
-      }
-    });
-    conn.on('close',()=>{const p=gameState.players.find(pl=>connections[pl.id]===conn);if(p)p.connected=false;broadcastLobby()});
-  }
-  // Connection may already be open when the 'connection' event fires
-  if(conn.open){
-    setupDataHandler();
-  } else {
-    conn.on('open',()=>setupDataHandler());
-  }
-  // Also handle error
-  conn.on('error',err=>console.error('Conn error:',err));
-}
-function broadcastLobby(){const d={type:'lobbyUpdate',players:gameState.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,connected:p.connected,isAI:p.isAI})),roomCode};Object.values(connections).forEach(c=>{if(c.open)c.send(d)});renderPL()}
-function broadcastGS(){gameState.players.forEach((p,i)=>{if(p.isAI)return;const c=connections[p.id];if(c&&c.open)c.send({type:'gameState',state:sanState(i)})});if(isHost||isSoloMode)renderGame(sanState(myPlayerIndex))}
-function sanState(pi){return{phase:gameState.phase,players:gameState.players.map((p,i)=>({id:p.id,name:p.name,avatar:p.avatar,handCount:p.hand.length,hasBrokenIce:p.hasBrokenIce,connected:p.connected,isAI:p.isAI,hand:i===pi?p.hand:undefined})),table:gameState.table,poolCount:gameState.pool.length,currentTurn:gameState.currentTurn,myIndex:pi}}
-
-function handleHostMsg(data){if(data.type==='lobbyUpdate')renderPLData(data.players);else if(data.type==='gameState')renderGame(data.state);else if(data.type==='error'||data.type==='toast')showToast(data.msg);else if(data.type==='gameStart'){myPlayerIndex=data.myIndex;document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex'}else if(data.type==='gameOver')showWinner(data)}
 
 function doAction(pi,data){
   if(data.action==='meld')processMeld(pi,data.tileIndices,data.targetSetIndex);
@@ -334,29 +381,29 @@ function doAction(pi,data){
   else if(data.action==='replaceJoker')processReplaceJoker(pi,data.handTileIndex,data.setIndex,data.jokerPos);
 }
 
-function showWaitingRoom(){document.getElementById('setupCard').style.display='none';document.getElementById('waitingCard').style.display='block';if(isHost){document.getElementById('roomCodeDisplay').style.display='block';document.getElementById('displayCode').textContent=roomCode;document.getElementById('startBtn').style.display='block';document.getElementById('waitingTitle').textContent='等待玩家加入';document.getElementById('waitingStatus').textContent='分享房間號碼給朋友';renderPL()}else{document.getElementById('roomCodeDisplay').style.display='none';document.getElementById('startBtn').style.display='none';document.getElementById('waitingTitle').textContent='已加入房間 '+roomCode;document.getElementById('waitingStatus').textContent='等待房主開始遊戲'}}
-
+function showWaitingRoom(){
+  document.getElementById('setupCard').style.display='none';document.getElementById('waitingCard').style.display='block';
+  if(isHost){document.getElementById('roomCodeDisplay').style.display='block';document.getElementById('displayCode').textContent=roomCode;document.getElementById('startBtn').style.display='block';document.getElementById('waitingTitle').textContent='等待玩家加入';document.getElementById('waitingStatus').textContent='分享房間號碼給朋友';renderPL()}
+  else{document.getElementById('roomCodeDisplay').style.display='none';document.getElementById('startBtn').style.display='none';document.getElementById('waitingTitle').textContent='已加入房間 '+roomCode;document.getElementById('waitingStatus').textContent='等待房主開始遊戲'}
+}
 function renderPL(){if(!gameState)return;const l=document.getElementById('playerList');l.innerHTML='';gameState.players.forEach((p,i)=>{const d=document.createElement('div');d.className='player-item';d.innerHTML=`<span class="avatar">${AVATARS[p.avatar]}</span><span class="name">${p.name}</span>${i===0?'<span class="host-badge">房主</span>':''}${p.isAI?'<span class="ai-badge">AI</span>':''}`;l.appendChild(d)});const sb=document.getElementById('startBtn');if(sb){sb.disabled=gameState.players.length<2;sb.textContent=`開始遊戲 (${gameState.players.length}/4)`}}
 function renderPLData(players){const l=document.getElementById('playerList');l.innerHTML='';players.forEach((p,i)=>{const d=document.createElement('div');d.className='player-item';d.innerHTML=`<span class="avatar">${AVATARS[p.avatar]}</span><span class="name">${p.name}</span>${i===0?'<span class="host-badge">房主</span>':''}${p.isAI?'<span class="ai-badge">AI</span>':''}`;l.appendChild(d)})}
-function leaveRoom(){if(peer)peer.destroy();location.reload()}
+function leaveRoom(){if(mqttClient)mqttClient.end();location.reload()}
 
 function createPool(){const pool=[];let id=0;for(let s=0;s<2;s++)for(const c of COLORS)for(let n=1;n<=13;n++)pool.push({id:id++,color:c,number:n});pool.push({id:id++,color:'joker',number:0});pool.push({id:id++,color:'joker',number:0});return shuffle(pool)}
 function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]]}return r}
-
 function tileScore(t){return t.color==='joker'?30:t.number}
 function handScore(hand){return hand.reduce((s,t)=>s+tileScore(t),0)}
 
 // ===== SOLO =====
 function startSoloGame(){
-  isSoloMode=true;isHost=true;myPlayerIndex=0;
-  const aiCount=parseInt(document.getElementById('aiCountSelect').value);
-  aiDifficulty=document.getElementById('aiDiffSelect').value;
+  isSoloMode=true;isHost=true;myPlayerIndex=0;myId='local';
+  const aiCount=parseInt(document.getElementById('aiCountSelect').value);aiDifficulty=document.getElementById('aiDiffSelect').value;
   const usedAv=new Set([selectedAvatar]),usedNm=new Set();
-  gameState={phase:'playing',players:[{id:'local',name:myNickname,avatar:selectedAvatar,hand:[],hasBrokenIce:false,connected:true,isAI:false}],table:[],pool:createPool(),currentTurn:0};
+  gameState={phase:'playing',players:[{id:myId,name:myNickname,avatar:selectedAvatar,hand:[],hasBrokenIce:false,connected:true,isAI:false}],table:[],pool:createPool(),currentTurn:0};
   for(let i=0;i<aiCount;i++){let av;do{av=Math.floor(Math.random()*8)}while(usedAv.has(av));usedAv.add(av);let nm;do{nm=AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)]}while(usedNm.has(nm));usedNm.add(nm);gameState.players.push({id:'ai-'+i,name:nm,avatar:av,hand:[],hasBrokenIce:false,connected:true,isAI:true})}
   gameState.players.forEach(p=>{for(let i=0;i<14;i++)if(gameState.pool.length)p.hand.push(gameState.pool.pop())});
-  saveTurnBackup();
-  document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';
+  saveTurnBackup();document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';
   broadcastGS();startTurnTimer();
 }
 
@@ -365,7 +412,7 @@ function startGame(){
   gameState.phase='playing';gameState.pool=createPool();gameState.table=[];gameState.currentTurn=0;
   gameState.players.forEach(p=>{p.hand=[];p.hasBrokenIce=false;for(let i=0;i<14;i++)if(gameState.pool.length)p.hand.push(gameState.pool.pop())});
   saveTurnBackup();
-  gameState.players.forEach((p,i)=>{const c=connections[p.id];if(c&&c.open)c.send({type:'gameStart',myIndex:i})});
+  gameState.players.forEach((p,i)=>{if(p.id!==myId)mqttSendDM(p.id,{type:'gameStart',targetId:p.id,myIndex:i})});
   myPlayerIndex=0;document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';
   broadcastGS();startTurnTimer();
 }
@@ -375,13 +422,11 @@ function saveTurnBackup(){turnBackup=JSON.parse(JSON.stringify({table:gameState.
 
 function processMeld(pi,indices,tsi){
   if(gameState.currentTurn!==pi){sendTP(pi,{type:'toast',msg:'不是你的回合'});return}
-  const p=gameState.players[pi],tiles=indices.map(i=>p.hand[i]).filter(Boolean);
-  if(!tiles.length)return;
+  const p=gameState.players[pi],tiles=indices.map(i=>p.hand[i]).filter(Boolean);if(!tiles.length)return;
   if(tsi!==undefined&&tsi>=0&&tsi<gameState.table.length)gameState.table[tsi]=[...gameState.table[tsi],...tiles];
   else gameState.table.push([...tiles]);
   [...indices].sort((a,b)=>b-a).forEach(i=>p.hand.splice(i,1));
-  hasMeldedThisTurn=true;broadcastGS();
-  if(p.hand.length===0)endGameWithWinner(pi);
+  hasMeldedThisTurn=true;broadcastGS();if(p.hand.length===0)endGameWithWinner(pi);
 }
 
 function processSplitTake(pi,setIndex,tilePositions){
@@ -390,138 +435,66 @@ function processSplitTake(pi,setIndex,tilePositions){
   const set=gameState.table[setIndex];if(!set)return;
   const taken=tilePositions.map(p=>set[p]).filter(Boolean);
   const remaining=set.filter((_,i)=>!tilePositions.includes(i));
-  if(remaining.length>0)gameState.table[setIndex]=remaining;
-  else gameState.table.splice(setIndex,1);
-  // Mark taken tiles as borrowed
-  taken.forEach(t=>{ if(pi===myPlayerIndex||(isHost&&!gameState.players[pi].isAI)) borrowedTileIds.add(t.id); });
-  gameState.players[pi].hand.push(...taken);
-  hasMeldedThisTurn=true;broadcastGS();
+  if(remaining.length>0)gameState.table[setIndex]=remaining;else gameState.table.splice(setIndex,1);
+  taken.forEach(t=>{if(gameState.players[pi].id===myId)borrowedTileIds.add(t.id)});
+  gameState.players[pi].hand.push(...taken);hasMeldedThisTurn=true;broadcastGS();
 }
 
 function processReplaceJoker(pi,handTileIdx,setIndex,jokerPos){
   if(gameState.currentTurn!==pi)return;
   if(!gameState.players[pi].hasBrokenIce){sendTP(pi,{type:'toast',msg:'破冰後才能替換鬼牌'});return}
-  const player=gameState.players[pi];
-  const set=gameState.table[setIndex];if(!set||!set[jokerPos]||set[jokerPos].color!=='joker')return;
+  const player=gameState.players[pi],set=gameState.table[setIndex];
+  if(!set||!set[jokerPos]||set[jokerPos].color!=='joker')return;
   const handTile=player.hand[handTileIdx];if(!handTile)return;
-  // Validate replacement matches
-  const jokerTile=set[jokerPos];
-  const testSet=[...set];testSet[jokerPos]=handTile;
+  const jokerTile=set[jokerPos],testSet=[...set];testSet[jokerPos]=handTile;
   if(!valSet(testSet)){sendTP(pi,{type:'toast',msg:'此牌無法替換該鬼牌'});return}
-  // Do replacement: joker goes to player hand, hand tile goes to set
-  set[jokerPos]=handTile;
-  player.hand.splice(handTileIdx,1);
-  player.hand.push(jokerTile); // Joker goes to hand — must be used this turn
-  hasMeldedThisTurn=true;
-  broadcastGS();
+  set[jokerPos]=handTile;player.hand.splice(handTileIdx,1);player.hand.push(jokerTile);
+  hasMeldedThisTurn=true;broadcastGS();
   sendTP(pi,{type:'toast',msg:'已替換鬼牌！鬼牌必須在本回合搭配 2 張手牌出掉'});
 }
 
 function processDraw(pi){
   if(gameState.currentTurn!==pi)return;
   if(hasMeldedThisTurn){sendTP(pi,{type:'toast',msg:'已出牌，不能摸牌'});return}
-  if(!gameState.pool.length){
-    checkPoolExhausted();return;
-  }
-  const drawn=gameState.pool.pop();
-  if(pi===myPlayerIndex)lastDrawnTileId=drawn.id;
-  gameState.players[pi].hand.push(drawn);
-  advanceTurn();broadcastGS();
+  if(!gameState.pool.length){checkPoolExhausted();return}
+  const drawn=gameState.pool.pop();if(gameState.players[pi].id===myId)lastDrawnTileId=drawn.id;
+  gameState.players[pi].hand.push(drawn);advanceTurn();broadcastGS();
 }
 
 function processEndTurn(pi){
   if(gameState.currentTurn!==pi)return;
   if(hasMeldedThisTurn){
-    // Check: borrowed tiles must all be back on table
-    if(borrowedTileIds.size>0 && pi===myPlayerIndex){
+    if(borrowedTileIds.size>0&&gameState.players[pi].id===myId){
       const handIds=new Set(gameState.players[pi].hand.map(t=>t.id));
-      const stillInHand=[...borrowedTileIds].filter(id=>handIds.has(id));
-      if(stillInHand.length>0){
-        sendTP(pi,{type:'toast',msg:`還有 ${stillInHand.length} 張從桌面取回的牌未歸還，請放回桌面`});return;
-      }
+      const still=[...borrowedTileIds].filter(id=>handIds.has(id));
+      if(still.length>0){sendTP(pi,{type:'toast',msg:`還有 ${still.length} 張從桌面取回的牌未歸還`});return}
     }
-    // Check ice-breaking
     if(!gameState.players[pi].hasBrokenIce){
       const oldIds=new Set();if(turnBackup)turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
       const nt=[];gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))nt.push(t)}));
       const sum=nt.reduce((s,t)=>s+(t.color==='joker'?0:t.number),0);
       if(sum<30){sendTP(pi,{type:'toast',msg:`破冰需 ≥30 點（目前 ${sum} 點）`});return}
-      const backupHandIds=new Set(turnBackup.hands[pi].map(t=>t.id));
-      for(const t of nt){if(!backupHandIds.has(t.id)){sendTP(pi,{type:'toast',msg:'破冰時只能使用手牌'});return}}
+      const bhi=new Set(turnBackup.hands[pi].map(t=>t.id));
+      for(const t of nt){if(!bhi.has(t.id)){sendTP(pi,{type:'toast',msg:'破冰時只能使用手牌'});return}}
       gameState.players[pi].hasBrokenIce=true;
     }
-    if(!valAll()){
-      sendTP(pi,{type:'toast',msg:'桌面有無效牌組！還原操作並罰抽 3 張牌'});
-      applyPenalty(pi);return;
-    }
-    // Auto-sort each set on table
-    autoSortTableSets();
-    // Track which tiles are newly placed this turn for highlight
-    computeLastPlayedTiles();
+    if(!valAll()){sendTP(pi,{type:'toast',msg:'桌面有無效牌組！還原並罰抽 3 張'});applyPenalty(pi);return}
+    autoSortTableSets();computeLastPlayedTiles();
   } else {
-    // No meld this turn — auto draw a tile
     if(gameState.pool.length>0){
-      const drawn=gameState.pool.pop();
-      if(pi===myPlayerIndex)lastDrawnTileId=drawn.id;
-      gameState.players[pi].hand.push(drawn);
-      sendTP(pi,{type:'toast',msg:'未出牌，自動摸一張牌'});
-    } else {
-      // Pool empty, just pass
+      const drawn=gameState.pool.pop();if(gameState.players[pi].id===myId)lastDrawnTileId=drawn.id;
+      gameState.players[pi].hand.push(drawn);sendTP(pi,{type:'toast',msg:'未出牌，自動摸一張牌'});
     }
     lastPlayedTileIds=new Set();
   }
-  borrowedTileIds=new Set();
-  advanceTurn();broadcastGS();
-}
-
-function autoSortTableSets(){
-  gameState.table.forEach((set,i)=>{
-    if(isRun(set)){
-      // Sort run: jokers fill gaps, non-jokers by number
-      const nj=set.filter(t=>t.color!=='joker').sort((a,b)=>a.number-b.number);
-      const jks=set.filter(t=>t.color==='joker');
-      if(nj.length===0){gameState.table[i]=set;return}
-      // Determine the run range
-      const nums=nj.map(t=>t.number);const mn=nums[0];
-      const sorted=[];let ji=0;
-      // Find best start
-      let start=mn;
-      for(let s=Math.max(1,mn);s<=mn;s++){
-        const end=s+set.length-1;if(end<=13){start=s;break}
-      }
-      const used=[...nj];
-      for(let n=start;n<start+set.length;n++){
-        const idx=used.findIndex(t=>t.number===n);
-        if(idx>=0){sorted.push(used[idx]);used.splice(idx,1)}
-        else if(ji<jks.length){sorted.push(jks[ji++])}
-      }
-      if(sorted.length===set.length)gameState.table[i]=sorted;
-    }
-    // Groups don't need number sorting (same number), but sort by color for consistency
-    else if(isGroup(set)){
-      set.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
-    }
-  });
-}
-
-function computeLastPlayedTiles(){
-  const oldIds=new Set();
-  if(turnBackup)turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
-  lastPlayedTileIds=new Set();
-  gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))lastPlayedTileIds.add(t.id)}));
-  // Clear highlight after 3 seconds
-  if(lastPlayedTimeout)clearTimeout(lastPlayedTimeout);
-  lastPlayedTimeout=setTimeout(()=>{lastPlayedTileIds=new Set();if(currentViewState)renderTable(currentViewState.table)},3000);
+  borrowedTileIds=new Set();advanceTurn();broadcastGS();
 }
 
 function applyPenalty(pi){
-  // Restore table and hands from backup
   gameState.table=JSON.parse(JSON.stringify(turnBackup.table));
   gameState.players.forEach((p,i)=>p.hand=turnBackup.hands[i].map(t=>({...t})));
-  // Draw 3 penalty tiles
   for(let i=0;i<3;i++){if(gameState.pool.length)gameState.players[pi].hand.push(gameState.pool.pop())}
-  hasMeldedThisTurn=false;
-  advanceTurn();broadcastGS();
+  hasMeldedThisTurn=false;advanceTurn();broadcastGS();
 }
 
 function processUndo(pi){
@@ -529,6 +502,30 @@ function processUndo(pi){
   gameState.table=JSON.parse(JSON.stringify(turnBackup.table));
   gameState.players.forEach((p,i)=>p.hand=turnBackup.hands[i].map(t=>({...t})));
   hasMeldedThisTurn=false;borrowedTileIds=new Set();broadcastGS();sendTP(pi,{type:'toast',msg:'已撤銷'});
+}
+
+function autoSortTableSets(){
+  gameState.table.forEach((set,i)=>{
+    if(isRun(set)){
+      const nj=set.filter(t=>t.color!=='joker').sort((a,b)=>a.number-b.number);
+      const jks=set.filter(t=>t.color==='joker');if(!nj.length)return;
+      let start=nj[0].number;const sorted=[];let ji=0;const used=[...nj];
+      for(let n=start;n<start+set.length;n++){
+        const idx=used.findIndex(t=>t.number===n);
+        if(idx>=0){sorted.push(used[idx]);used.splice(idx,1)}else if(ji<jks.length){sorted.push(jks[ji++])}
+      }
+      if(sorted.length===set.length)gameState.table[i]=sorted;
+    } else if(isGroup(set)){
+      set.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
+    }
+  });
+}
+
+function computeLastPlayedTiles(){
+  const oldIds=new Set();if(turnBackup)turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
+  lastPlayedTileIds=new Set();gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))lastPlayedTileIds.add(t.id)}));
+  if(lastPlayedTimeout)clearTimeout(lastPlayedTimeout);
+  lastPlayedTimeout=setTimeout(()=>{lastPlayedTileIds=new Set();if(currentViewState)renderTable(currentViewState.table)},3000);
 }
 
 function valAll(){return gameState.table.every(s=>valSet(s))}
@@ -540,46 +537,27 @@ function advanceTurn(){
   gameState.currentTurn=(gameState.currentTurn+1)%gameState.players.length;
   saveTurnBackup();resetTurnTimer();
   if(gameState.pool.length===0)checkPoolExhausted();
-  else if((isHost||isSoloMode)&&gameState.players[gameState.currentTurn].isAI&&gameState.phase==='playing')setTimeout(()=>runAI(gameState.currentTurn),800);
+  else if(isHost&&gameState.players[gameState.currentTurn].isAI&&gameState.phase==='playing')setTimeout(()=>runAI(gameState.currentTurn),800);
 }
 
-function checkPoolExhausted(){
-  // If pool empty and no one can play, lowest hand wins
-  // For simplicity: when pool empty, game continues but drawing is blocked
-  // Game ends when a full round passes with no plays
-  if(gameState.pool.length===0&&gameState.phase==='playing'){
-    // Check if current player is AI — let them try
-    if((isHost||isSoloMode)&&gameState.players[gameState.currentTurn].isAI)
-      setTimeout(()=>runAI(gameState.currentTurn),800);
-  }
-}
+function checkPoolExhausted(){if(gameState.pool.length===0&&gameState.phase==='playing'&&isHost&&gameState.players[gameState.currentTurn].isAI)setTimeout(()=>runAI(gameState.currentTurn),800)}
 
+let noPlayTurns=0;
 function endGameWithWinner(wi){
   gameState.phase='finished';if(turnTimer)clearInterval(turnTimer);
-  const w=gameState.players[wi];
-  const losersTotal=gameState.players.reduce((s,p,i)=>i===wi?s:s+handScore(p.hand),0);
+  const w=gameState.players[wi],losersTotal=gameState.players.reduce((s,p,i)=>i===wi?s:s+handScore(p.hand),0);
   const scores=gameState.players.map((p,i)=>({name:p.name,avatar:p.avatar,points:i===wi?losersTotal:-handScore(p.hand)}));
   const data={type:'gameOver',winnerIndex:wi,winnerName:w.name,winnerAvatar:w.avatar,scores,isPoolExhaust:false};
-  Object.values(connections).forEach(c=>{if(c.open)c.send(data)});showWinner(data);
+  if(!isSoloMode)mqttSend(data);showWinner(data);
 }
-
 function endGamePoolExhausted(){
   gameState.phase='finished';if(turnTimer)clearInterval(turnTimer);
-  let minScore=Infinity,wi=0;
-  gameState.players.forEach((p,i)=>{const s=handScore(p.hand);if(s<minScore){minScore=s;wi=i}});
+  let minScore=Infinity,wi=0;gameState.players.forEach((p,i)=>{const s=handScore(p.hand);if(s<minScore){minScore=s;wi=i}});
   const w=gameState.players[wi];
-  const scores=gameState.players.map((p,i)=>{
-    if(i===wi){const losers=gameState.players.reduce((s,pp,j)=>j===wi?s:s+(handScore(pp.hand)-minScore),0);return{name:p.name,avatar:p.avatar,points:losers}}
-    return{name:p.name,avatar:p.avatar,points:-(handScore(p.hand)-minScore)};
-  });
+  const scores=gameState.players.map((p,i)=>{if(i===wi){const l=gameState.players.reduce((s,pp,j)=>j===wi?s:s+(handScore(pp.hand)-minScore),0);return{name:p.name,avatar:p.avatar,points:l}}return{name:p.name,avatar:p.avatar,points:-(handScore(p.hand)-minScore)}});
   const data={type:'gameOver',winnerIndex:wi,winnerName:w.name,winnerAvatar:w.avatar,scores,isPoolExhaust:true};
-  Object.values(connections).forEach(c=>{if(c.open)c.send(data)});showWinner(data);
+  if(!isSoloMode)mqttSend(data);showWinner(data);
 }
-
-// Track consecutive no-play turns for pool exhaustion
-let noPlayTurns=0;
-
-function sendTP(pi,data){if(gameState.players[pi].isAI)return;if(pi===myPlayerIndex&&(isHost||isSoloMode)){if(data.type==='toast')showToast(data.msg);return}const c=connections[gameState.players[pi].id];if(c&&c.open)c.send(data)}
 
 // ===== AI =====
 function runAI(pi){
@@ -589,39 +567,26 @@ function runAI(pi){
     document.getElementById('aiThinking').classList.remove('show');
     if(gameState.phase!=='playing'||gameState.currentTurn!==pi)return;
     const moved=aiTryMeld(pi);
-    if(moved){
-      hasMeldedThisTurn=true;
-      if(gameState.players[pi].hand.length===0){endGameWithWinner(pi);return}
-      if(aiDifficulty==='hard'){let extra=true;while(extra&&gameState.players[pi].hand.length>0){extra=aiTryMeld(pi);if(extra&&gameState.players[pi].hand.length===0){endGameWithWinner(pi);return}}}
-      if(valAll()){noPlayTurns=0;processEndTurn(pi)}
-      else{processUndo(pi);aiDraw(pi)}
-    }else aiDraw(pi);
+    if(moved){hasMeldedThisTurn=true;if(gameState.players[pi].hand.length===0){endGameWithWinner(pi);return}
+      if(aiDifficulty==='hard'){let ex=true;while(ex&&gameState.players[pi].hand.length>0){ex=aiTryMeld(pi);if(ex&&gameState.players[pi].hand.length===0){endGameWithWinner(pi);return}}}
+      if(valAll()){noPlayTurns=0;processEndTurn(pi)}else{processUndo(pi);aiDraw(pi)}}
+    else aiDraw(pi);
   },1000+Math.random()*1500);
 }
-
-function aiDraw(pi){
-  if(gameState.pool.length>0){gameState.players[pi].hand.push(gameState.pool.pop());noPlayTurns=0}
-  else{noPlayTurns++;if(noPlayTurns>=gameState.players.length){endGamePoolExhausted();return}}
-  advanceTurn();broadcastGS();
-}
-
+function aiDraw(pi){if(gameState.pool.length>0){gameState.players[pi].hand.push(gameState.pool.pop());noPlayTurns=0}else{noPlayTurns++;if(noPlayTurns>=gameState.players.length){endGamePoolExhausted();return}}advanceTurn();broadcastGS()}
 function aiTryMeld(pi){
   const player=gameState.players[pi],hand=player.hand;if(!hand.length)return false;
-  const th=aiDifficulty==='easy'?.4:aiDifficulty==='normal'?.7:1;
-  if(Math.random()>th+.3)return false;
-  // Groups
+  const th=aiDifficulty==='easy'?.4:aiDifficulty==='normal'?.7:1;if(Math.random()>th+.3)return false;
   const byNum={};hand.forEach((t,i)=>{if(t.color!=='joker'){if(!byNum[t.number])byNum[t.number]=[];byNum[t.number].push({t,i})}});
   for(const num in byNum){const tiles=byNum[num];const cs=new Set(),chosen=[];for(const x of tiles){if(!cs.has(x.t.color)){cs.add(x.t.color);chosen.push(x)}if(chosen.length>=4)break}if(chosen.length>=3){if(!player.hasBrokenIce){const sum=chosen.reduce((s,c)=>s+c.t.number,0);if(sum<30)continue}processMeld(pi,chosen.map(c=>c.i));return true}}
-  // Runs
   const byCol={};hand.forEach((t,i)=>{if(t.color!=='joker'){if(!byCol[t.color])byCol[t.color]=[];byCol[t.color].push({t,i})}});
   for(const col in byCol){const tiles=byCol[col].sort((a,b)=>a.t.number-b.t.number);const unique=[];const seen=new Set();for(const x of tiles){if(!seen.has(x.t.number)){seen.add(x.t.number);unique.push(x)}}for(let start=0;start<unique.length-2;start++){let run=[unique[start]];for(let j=start+1;j<unique.length;j++){if(unique[j].t.number===run[run.length-1].t.number+1)run.push(unique[j]);else break}if(run.length>=3){if(!player.hasBrokenIce){const sum=run.reduce((s,r)=>s+r.t.number,0);if(sum<30)continue}processMeld(pi,run.map(r=>r.i));return true}}}
-  // Add to existing (normal+hard)
   if(aiDifficulty!=='easy'&&gameState.table.length>0&&player.hasBrokenIce){for(let si=0;si<gameState.table.length;si++){const set=gameState.table[si];for(let hi=hand.length-1;hi>=0;hi--){const test=[...set,hand[hi]];if(valSet(test)){processMeld(pi,[hi],si);return true}}}}
   return false;
 }
 
 // ===== TIMER =====
-function startTurnTimer(){turnTimeLeft=TURN_TIME;updateTimerBar();if(turnTimer)clearInterval(turnTimer);turnTimer=setInterval(()=>{if(gameState&&gameState.players[gameState.currentTurn].isAI)return;turnTimeLeft--;updateTimerBar();if(turnTimeLeft<=0&&(isHost||isSoloMode)){const ct=gameState.currentTurn;if(hasMeldedThisTurn){sendTP(ct,{type:'toast',msg:'超時！還原操作並罰抽 1 張牌'});processUndo(ct);if(gameState.pool.length)gameState.players[ct].hand.push(gameState.pool.pop());advanceTurn();broadcastGS()}else{processDraw(ct)}}},1000)}
+function startTurnTimer(){turnTimeLeft=TURN_TIME;updateTimerBar();if(turnTimer)clearInterval(turnTimer);turnTimer=setInterval(()=>{if(gameState&&gameState.players[gameState.currentTurn].isAI)return;turnTimeLeft--;updateTimerBar();if(turnTimeLeft<=0&&isHost){const ct=gameState.currentTurn;if(hasMeldedThisTurn){sendTP(ct,{type:'toast',msg:'超時！還原並罰抽 1 張'});processUndo(ct);if(gameState.pool.length)gameState.players[ct].hand.push(gameState.pool.pop());advanceTurn();broadcastGS()}else{processDraw(ct)}}},1000)}
 function resetTurnTimer(){turnTimeLeft=TURN_TIME;updateTimerBar()}
 function updateTimerBar(){const b=document.getElementById('timerBar');if(!b)return;const p=(turnTimeLeft/TURN_TIME)*100;b.style.width=p+'%';b.className='timer-bar'+(p<20?' danger':p<40?' warning':'')}
 
@@ -639,7 +604,6 @@ function renderGame(state){
   const my=state.currentTurn===state.myIndex;
   document.querySelectorAll('.ctrl-btn').forEach(b=>{if(b.classList.contains('sort-btn'))return;b.disabled=!my});
 }
-
 function renderTable(table){
   const c=document.getElementById('tableSets');
   if(!table.length){c.innerHTML='<div class="empty-table-msg">桌面上還沒有牌組，出牌開始遊戲吧！</div>';return}
@@ -647,74 +611,36 @@ function renderTable(table){
   table.forEach((set,si)=>{
     const d=document.createElement('div');d.className='table-set'+(si===selectedTableSet?' selected-set':'');d.dataset.setIndex=si;
     if(!valSet(set))d.classList.add('invalid');
-    set.forEach((t,ti)=>{
-      const el=mkTile(t);
-      if(lastPlayedTileIds.has(t.id))el.classList.add('last-played');
-      el.onclick=e=>{e.stopPropagation();selectTableTile(si,ti,el)};
-      if(selectedTableTiles.some(x=>x.si===si&&x.ti===ti))el.classList.add('table-tile-selected');
-      d.appendChild(el);
-    });
+    set.forEach((t,ti)=>{const el=mkTile(t);if(lastPlayedTileIds.has(t.id))el.classList.add('last-played');el.onclick=e=>{e.stopPropagation();selectTableTile(si,ti,el)};if(selectedTableTiles.some(x=>x.si===si&&x.ti===ti))el.classList.add('table-tile-selected');d.appendChild(el)});
     d.onclick=()=>{document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));d.classList.add('selected-set');selectedTableSet=si};
     c.appendChild(d);
   });
 }
-
-function selectTableTile(si,ti,el){
-  const idx=selectedTableTiles.findIndex(x=>x.si===si&&x.ti===ti);
-  if(idx>=0){selectedTableTiles.splice(idx,1);el.classList.remove('table-tile-selected')}
-  else{selectedTableTiles.push({si,ti});el.classList.add('table-tile-selected')}
-  selectedTableSet=si;
-}
-
+function selectTableTile(si,ti,el){const idx=selectedTableTiles.findIndex(x=>x.si===si&&x.ti===ti);if(idx>=0){selectedTableTiles.splice(idx,1);el.classList.remove('table-tile-selected')}else{selectedTableTiles.push({si,ti});el.classList.add('table-tile-selected')}selectedTableSet=si}
 function renderHand(hand){
   const c=document.getElementById('handTiles');c.innerHTML='';
-  hand.forEach((tile,i)=>{
-    const el=mkTile(tile);el.dataset.handIndex=i;
-    if(borrowedTileIds.has(tile.id))el.classList.add('borrowed');
-    if(lastDrawnTileId===tile.id)el.classList.add('just-drawn');
-    if(selectedTiles.has(i))el.classList.add('selected');
-    el.onclick=()=>{if(selectedTiles.has(i)){selectedTiles.delete(i);el.classList.remove('selected')}else{selectedTiles.add(i);el.classList.add('selected')}};
-    c.appendChild(el);
-  });
-  // Auto-scroll to end if a tile was just drawn
-  if(lastDrawnTileId!==null){
-    requestAnimationFrame(()=>c.scrollLeft=c.scrollWidth);
-    lastDrawnTileId=null;
-  }
+  hand.forEach((tile,i)=>{const el=mkTile(tile);el.dataset.handIndex=i;if(borrowedTileIds.has(tile.id))el.classList.add('borrowed');if(lastDrawnTileId===tile.id)el.classList.add('just-drawn');if(selectedTiles.has(i))el.classList.add('selected');el.onclick=()=>{if(selectedTiles.has(i)){selectedTiles.delete(i);el.classList.remove('selected')}else{selectedTiles.add(i);el.classList.add('selected')}};c.appendChild(el)});
+  if(lastDrawnTileId!==null){requestAnimationFrame(()=>c.scrollLeft=c.scrollWidth);lastDrawnTileId=null}
 }
-
 function mkTile(tile){const el=document.createElement('div');el.className='tile';el.dataset.color=tile.color;el.dataset.tileId=tile.id;if(tile.color==='joker')el.innerHTML='<span class="tile-num">☆</span><span class="tile-dots">JOKER</span>';else el.innerHTML=`<span class="tile-num">${tile.number}</span><span class="tile-dots">${'●'.repeat(Math.min(tile.number,4))}</span>`;return el}
 
 // ===== PLAYER ACTIONS =====
 function clearAllSelections(){selectedTiles.clear();selectedTableTiles=[];selectedTableSet=-1;document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));document.querySelectorAll('.tile.table-tile-selected').forEach(t=>t.classList.remove('table-tile-selected'))}
 function clearAllSelectionsAndBorrowed(){clearAllSelections();borrowedTileIds=new Set()}
 
-function sortHand(by){if(!currentViewState)return;const hand=currentViewState.players[myPlayerIndex].hand;if(!hand)return;if(by==='color')hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});else hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});clearAllSelections();renderHand(hand);if(isHost||isSoloMode)gameState.players[myPlayerIndex].hand=hand;else if(hostConn)hostConn.send({type:'gameAction',action:'sort',order:hand.map(t=>t.id)})}
-
+function sortHand(by){if(!currentViewState)return;const hand=currentViewState.players[myPlayerIndex].hand;if(!hand)return;if(by==='color')hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});else hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});clearAllSelections();renderHand(hand);if(isHost||isSoloMode)gameState.players[myPlayerIndex].hand=hand}
 function playSelected(){if(!selectedTiles.size){showToast('請先選取要出的牌');return}const idx=Array.from(selectedTiles).sort((a,b)=>a-b);clearAllSelections();sendAction({action:'meld',tileIndices:idx})}
 function addToExistingSet(){if(!selectedTiles.size){showToast('請先選取牌');return}if(selectedTableSet<0){showToast('請先點擊桌面牌組');return}const idx=Array.from(selectedTiles).sort((a,b)=>a-b);const tsi=selectedTableSet;clearAllSelections();sendAction({action:'meld',tileIndices:idx,targetSetIndex:tsi})}
-
-function splitFromSet(){
-  if(!selectedTableTiles.length){showToast('請先點擊桌面牌組中要取出的牌');return}
-  const si=selectedTableTiles[0].si;
-  const positions=selectedTableTiles.filter(x=>x.si===si).map(x=>x.ti);
-  clearAllSelections();
-  sendAction({action:'splitTake',setIndex:si,tilePositions:positions});
-}
-
-function replaceJoker(){
-  if(selectedTiles.size!==1){showToast('請選取手牌中 1 張牌來替換鬼牌');return}
-  if(!selectedTableTiles.length){showToast('請點擊桌面上要替換的鬼牌');return}
-  const jt=selectedTableTiles[0];
-  const hi=Array.from(selectedTiles)[0];
-  clearAllSelections();
-  sendAction({action:'replaceJoker',handTileIndex:hi,setIndex:jt.si,jokerPos:jt.ti});
-}
-
+function splitFromSet(){if(!selectedTableTiles.length){showToast('請先點擊桌面牌組中要取出的牌');return}const si=selectedTableTiles[0].si;const positions=selectedTableTiles.filter(x=>x.si===si).map(x=>x.ti);clearAllSelections();sendAction({action:'splitTake',setIndex:si,tilePositions:positions})}
+function replaceJoker(){if(selectedTiles.size!==1){showToast('請選取手牌中 1 張牌來替換鬼牌');return}if(!selectedTableTiles.length){showToast('請點擊桌面上要替換的鬼牌');return}const jt=selectedTableTiles[0];const hi=Array.from(selectedTiles)[0];clearAllSelections();sendAction({action:'replaceJoker',handTileIndex:hi,setIndex:jt.si,jokerPos:jt.ti})}
 function drawTile(){clearAllSelections();sendAction({action:'draw'})}
 function endTurn(){clearAllSelections();sendAction({action:'endTurn'})}
 function undoTurn(){clearAllSelectionsAndBorrowed();sendAction({action:'undo'})}
-function sendAction(a){if(isHost||isSoloMode)doAction(myPlayerIndex,a);else if(hostConn)hostConn.send({type:'gameAction',...a})}
+
+function sendAction(a){
+  if(isHost||isSoloMode) doAction(myPlayerIndex,a);
+  else mqttSend({type:'gameAction',playerId:myId,...a});
+}
 
 // ===== WINNER =====
 function showWinner(data){
