@@ -73,6 +73,19 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 .tile[data-color="black"] .tile-num{color:var(--tile-black)}
 .tile[data-color="joker"]{background:linear-gradient(135deg,#FFE0F0,#E0F0FF)}
 .tile[data-color="joker"] .tile-num{color:var(--tile-joker);font-size:1.4rem}
+.tile[data-color="double"]{background:linear-gradient(135deg,#FFECD2,#FCB69F)}
+.tile[data-color="double"] .tile-num{color:#E06030;font-size:.85rem;font-weight:900}
+.tile[data-color="double"] .tile-dots{color:#E06030}
+.tile[data-color="colorchange"]{background:linear-gradient(135deg,#A8E6CF,#DCEDC1,#FFD3B6,#FFAAA5)}
+.tile[data-color="colorchange"] .tile-num{color:#2E8B57;font-size:.85rem;font-weight:900}
+.tile[data-color="colorchange"] .tile-dots{color:#2E8B57}
+.tile[data-color="mirror"]{background:linear-gradient(135deg,#D4E0FF,#B8C6FF)}
+.tile[data-color="mirror"] .tile-num{color:#4A5AE8;font-size:.85rem;font-weight:900}
+.tile[data-color="mirror"] .tile-dots{color:#4A5AE8}
+.game-mode-row{display:flex;gap:6px;margin-bottom:14px}
+.mode-btn{flex:1;padding:8px;border:2px solid rgba(255,155,94,.3);border-radius:12px;background:var(--bg-cream);font-family:inherit;font-weight:700;font-size:.8rem;color:var(--text-light);cursor:pointer;transition:all .2s;text-align:center}
+.mode-btn.active{background:var(--accent-orange);color:#fff;border-color:var(--accent-orange)}
+.mode-btn:hover{border-color:var(--accent-orange)}
 .tile.table-tile-selected{border-color:var(--tile-joker);box-shadow:0 0 12px rgba(196,74,232,.4);transform:translateY(-4px)}
 .hand-area{background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-top:2px solid rgba(255,155,94,.2);padding:8px 10px;flex-shrink:0}
 .hand-controls{display:flex;gap:4px;margin-bottom:8px;align-items:center;justify-content:space-between}
@@ -156,6 +169,9 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
       <button class="tab-btn" data-mode="join" onclick="setMode('join')">加入房間</button>
     </div>
     <div id="soloOptions">
+      <div class="input-group"><label>遊戲版本</label>
+        <div class="game-mode-row"><button class="mode-btn active" data-gm="classic" onclick="setGameMode('classic')">🎲 經典版</button><button class="mode-btn" data-gm="twist" onclick="setGameMode('twist')">🌀 變臉版 Twist</button></div>
+      </div>
       <div class="input-group"><label>AI 對手數量</label><select id="aiCountSelect"><option value="1">1 位</option><option value="2" selected>2 位</option><option value="3">3 位</option></select></div>
       <div class="input-group"><label>AI 難度</label><select id="aiDiffSelect"><option value="easy">簡單 🌱</option><option value="normal" selected>普通 🌿</option><option value="hard">困難 🔥</option></select></div>
     </div>
@@ -211,6 +227,11 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
     <h3>📋 出牌方式</h3><p><b>群組</b>：3-4 張同數字不同顏色的牌。<b>順組</b>：3 張以上同色連續數字的牌。</p>
     <h3>🔄 桌面重組</h3><p>破冰後，你可以拆分、重組桌面上任何牌組，只要回合結束時所有牌組都是合法的即可。</p>
     <h3>🃏 鬼牌規則</h3><p>Joker 可替代任何牌。可用手牌替換桌上的 Joker，但取回的 Joker 必須在同一回合搭配至少 2 張手牌組成新牌組。手中 Joker 算 30 點罰分。</p>
+    <h3>🌀 變臉版特殊鬼牌</h3>
+    <p><b>⏩ 雙人百搭</b>：代表 2 個連續數字（順組）或 2 個不同顏色（群組），破冰算兩張牌點數。不可放 12 後或 2 前。</p>
+    <p><b>🔄 變色百搭</b>：僅用於順組，連接兩段不同顏色的連續數字。</p>
+    <p><b>🪞 鏡射百搭</b>：放在中間，左右須完全對稱鏡像。點數值 0，罰分 30。</p>
+    <p><i>特殊鬼牌不能替代普通鬼牌或其他特殊鬼牌。僅在變臉版模式出現。</i></p>
     <h3>⏱ 時間限制</h3><p>每回合 2 分鐘。超時自動撤銷並摸牌。</p>
     <h3>⚠️ 操作失敗懲罰</h3><p>桌面有無效牌組時，還原操作並罰抽 3 張牌。</p>
     <h3>🏁 結束與計分</h3><p>勝者得所有敗者手牌點數為正分，敗者各得負分。牌堆用盡且無人出完，手牌最低者勝。</p>
@@ -221,6 +242,7 @@ body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(1
 <script>
 const AVATARS=['🐱','🐶','🐰','🐻','🦊','🐼','🐨','🦁'],COLORS=['red','blue','yellow','black'],AI_NAMES=['小花','阿呆','球球','豆豆','奶茶','糰子','麻糬'];
 let mode='solo',selectedAvatar=0,myId='',myNickname='',roomCode='',isHost=false,isSoloMode=false,aiDifficulty='normal';
+let gameMode='classic'; // 'classic' or 'twist'
 let mqttClient=null; // MQTT WebSocket client
 let gameState=null,myPlayerIndex=-1,selectedTiles=new Set(),selectedTableTiles=[],turnBackup=null,hasMeldedThisTurn=false;
 let turnTimer=null,turnTimeLeft=120,currentViewState=null,selectedTableSet=-1;
@@ -358,6 +380,7 @@ function sendTP(pi,data){
 function toggleRules(){document.getElementById('rulesModal').classList.toggle('show')}
 function initAvatars(){const g=document.getElementById('avatarGrid');AVATARS.forEach((a,i)=>{const b=document.createElement('button');b.className='avatar-btn'+(i===0?' selected':'');b.textContent=a;b.onclick=()=>{document.querySelectorAll('.avatar-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedAvatar=i};g.appendChild(b)})}
 function setMode(m){mode=m;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));document.getElementById('soloOptions').style.display=m==='solo'?'block':'none';document.getElementById('joinField').style.display=m==='join'?'block':'none';document.getElementById('goBtn').textContent=m==='solo'?'開始單人遊戲':m==='host'?'建立房間':'加入房間'}
+function setGameMode(gm){gameMode=gm;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.gm===gm))}
 function showToast(msg,dur=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),dur)}
 function genCode(){return String(Math.floor(1000+Math.random()*9000))}
 
@@ -415,9 +438,26 @@ function renderPL(){if(!gameState)return;const l=document.getElementById('player
 function renderPLData(players){const l=document.getElementById('playerList');l.innerHTML='';players.forEach((p,i)=>{const d=document.createElement('div');d.className='player-item';d.innerHTML=`<span class="avatar">${AVATARS[p.avatar]}</span><span class="name">${p.name}</span>${i===0?'<span class="host-badge">房主</span>':''}${p.isAI?'<span class="ai-badge">AI</span>':''}`;l.appendChild(d)})}
 function leaveRoom(){if(mqttClient)mqttClient.end();location.reload()}
 
-function createPool(){const pool=[];let id=0;for(let s=0;s<2;s++)for(const c of COLORS)for(let n=1;n<=13;n++)pool.push({id:id++,color:c,number:n});pool.push({id:id++,color:'joker',number:0});pool.push({id:id++,color:'joker',number:0});return shuffle(pool)}
+function createPool(){
+  const pool=[];let id=0;
+  for(let s=0;s<2;s++)for(const c of COLORS)for(let n=1;n<=13;n++)pool.push({id:id++,color:c,number:n});
+  // Regular jokers
+  pool.push({id:id++,color:'joker',number:0});
+  pool.push({id:id++,color:'joker',number:0});
+  // Twist special jokers
+  if(gameMode==='twist'){
+    pool.push({id:id++,color:'double',number:0});
+    pool.push({id:id++,color:'double',number:0});
+    pool.push({id:id++,color:'colorchange',number:0});
+    pool.push({id:id++,color:'colorchange',number:0});
+    pool.push({id:id++,color:'mirror',number:0});
+    pool.push({id:id++,color:'mirror',number:0});
+  }
+  return shuffle(pool);
+}
 function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]]}return r}
-function tileScore(t){return t.color==='joker'?30:t.number}
+function isJokerType(t){return t.color==='joker'||t.color==='double'||t.color==='colorchange'||t.color==='mirror'}
+function tileScore(t){if(t.color==='mirror')return 0;if(isJokerType(t))return 30;return t.number}
 function handScore(hand){return hand.reduce((s,t)=>s+tileScore(t),0)}
 
 // ===== SOLO =====
@@ -469,9 +509,12 @@ function processReplaceJoker(pi,handTileIdx,setIndex,jokerPos){
   if(gameState.currentTurn!==pi)return;
   if(!gameState.players[pi].hasBrokenIce){sendTP(pi,{type:'toast',msg:'破冰後才能替換鬼牌'});return}
   const player=gameState.players[pi],set=gameState.table[setIndex];
-  if(!set||!set[jokerPos]||set[jokerPos].color!=='joker')return;
+  if(!set||!set[jokerPos])return;
+  const target=set[jokerPos];
+  // Only regular jokers can be replaced by hand tiles; special jokers cannot be swapped
+  if(target.color!=='joker'){sendTP(pi,{type:'toast',msg:'特殊鬼牌不能被替換'});return}
   const handTile=player.hand[handTileIdx];if(!handTile)return;
-  const jokerTile=set[jokerPos],testSet=[...set];testSet[jokerPos]=handTile;
+  const jokerTile=target,testSet=[...set];testSet[jokerPos]=handTile;
   if(!valSet(testSet)){sendTP(pi,{type:'toast',msg:'此牌無法替換該鬼牌'});return}
   set[jokerPos]=handTile;player.hand.splice(handTileIdx,1);player.hand.push(jokerTile);
   hasMeldedThisTurn=true;broadcastGS();
@@ -531,17 +574,23 @@ function processUndo(pi){
 
 function autoSortTableSets(){
   gameState.table.forEach((set,i)=>{
-    if(isRun(set)){
-      const nj=set.filter(t=>t.color!=='joker').sort((a,b)=>a.number-b.number);
-      const jks=set.filter(t=>t.color==='joker');if(!nj.length)return;
-      let start=nj[0].number;const sorted=[];let ji=0;const used=[...nj];
-      for(let n=start;n<start+set.length;n++){
+    // Don't reorder sets with mirror/colorchange jokers — position matters
+    if(set.some(t=>t.color==='mirror'||t.color==='colorchange')) return;
+    const checkRun=gameMode==='twist'?isRunTwist(set):isRun(set);
+    const checkGroup=gameMode==='twist'?isGroupTwist(set):isGroup(set);
+    if(checkRun){
+      const nj=set.filter(t=>!isJokerType(t)).sort((a,b)=>a.number-b.number);
+      const jks=set.filter(t=>isJokerType(t));if(!nj.length)return;
+      let start=nj[0].number;const totalLen=nj.length+jks.reduce((s,t)=>s+(t.color==='double'?2:1),0);
+      const sorted=[];let ji=0;const used=[...nj];
+      for(let n=start;n<start+totalLen;n++){
         const idx=used.findIndex(t=>t.number===n);
-        if(idx>=0){sorted.push(used[idx]);used.splice(idx,1)}else if(ji<jks.length){sorted.push(jks[ji++])}
+        if(idx>=0){sorted.push(used[idx]);used.splice(idx,1)}
+        else if(ji<jks.length){sorted.push(jks[ji++]);if(jks[ji-1]&&jks[ji-1].color==='double')n++}
       }
       if(sorted.length===set.length)gameState.table[i]=sorted;
-    } else if(isGroup(set)){
-      set.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
+    } else if(checkGroup){
+      set.sort((a,b)=>{if(isJokerType(a))return 1;if(isJokerType(b))return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
     }
   });
 }
@@ -553,9 +602,127 @@ function computeLastPlayedTiles(){
 }
 
 function valAll(){return gameState.table.every(s=>valSet(s))}
-function valSet(set){if(set.length<3)return false;return isGroup(set)||isRun(set)}
-function isGroup(set){if(set.length>4)return false;const nj=set.filter(t=>t.color!=='joker');if(!nj.length)return set.length>=3&&set.length<=4;const n=nj[0].number,cs=new Set();for(const t of nj){if(t.number!==n)return false;if(cs.has(t.color))return false;cs.add(t.color)}return true}
-function isRun(set){const nj=set.filter(t=>t.color!=='joker');if(!nj.length)return set.length>=3;const col=nj[0].color;for(const t of nj)if(t.color!==col)return false;const jk=set.length-nj.length,nums=nj.map(t=>t.number).sort((a,b)=>a-b);for(let i=1;i<nums.length;i++)if(nums[i]===nums[i-1])return false;const mn=nums[0],mx=nums[nums.length-1];for(let st=Math.max(1,mx-set.length+1);st<=mn;st++){const en=st+set.length-1;if(en>13)continue;let need=0;const u=[...nums];for(let n=st;n<=en;n++){const idx=u.indexOf(n);if(idx>=0)u.splice(idx,1);else need++}if(!u.length&&need<=jk)return true}return false}
+function valSet(set){if(set.length<3)return false;if(gameMode==='twist')return isGroupTwist(set)||isRunTwist(set);return isGroup(set)||isRun(set)}
+
+// === CLASSIC VALIDATION ===
+function isGroup(set){if(set.length>4)return false;const nj=set.filter(t=>!isJokerType(t));if(!nj.length)return set.length>=3&&set.length<=4;const n=nj[0].number,cs=new Set();for(const t of nj){if(t.number!==n)return false;if(cs.has(t.color))return false;cs.add(t.color)}return true}
+function isRun(set){const nj=set.filter(t=>!isJokerType(t));if(!nj.length)return set.length>=3;const col=nj[0].color;for(const t of nj)if(t.color!==col)return false;const jk=set.length-nj.length,nums=nj.map(t=>t.number).sort((a,b)=>a-b);for(let i=1;i<nums.length;i++)if(nums[i]===nums[i-1])return false;const mn=nums[0],mx=nums[nums.length-1];for(let st=Math.max(1,mx-set.length+1);st<=mn;st++){const en=st+set.length-1;if(en>13)continue;let need=0;const u=[...nums];for(let n=st;n<=en;n++){const idx=u.indexOf(n);if(idx>=0)u.splice(idx,1);else need++}if(!u.length&&need<=jk)return true}return false}
+
+// === TWIST VALIDATION ===
+function isGroupTwist(set){
+  // Check for mirror joker — creates mirror group
+  if(set.some(t=>t.color==='mirror')) return isGroupMirror(set);
+  // Regular group + double joker can count as 2 tiles
+  const nj=set.filter(t=>!isJokerType(t));
+  const regJokers=set.filter(t=>t.color==='joker').length;
+  const dblJokers=set.filter(t=>t.color==='double').length;
+  const ccJokers=set.filter(t=>t.color==='colorchange').length; // not valid in groups
+  if(ccJokers>0) return false; // color change only for runs
+  const effectiveCount=nj.length+regJokers+dblJokers*2;
+  if(effectiveCount<3||effectiveCount>4) return false;
+  if(!nj.length) return effectiveCount>=3&&effectiveCount<=4;
+  const n=nj[0].number;const cs=new Set();
+  for(const t of nj){if(t.number!==n)return false;if(cs.has(t.color))return false;cs.add(t.color)}
+  return cs.size+regJokers+dblJokers*2<=4;
+}
+
+function isRunTwist(set){
+  if(set.some(t=>t.color==='mirror')) return isRunMirror(set);
+  // Runs can contain: regular tiles, jokers, double jokers, color-change jokers
+  const hasCC=set.some(t=>t.color==='colorchange');
+  if(hasCC) return isRunColorChange(set);
+  // Standard run with regular + double jokers
+  const nj=set.filter(t=>!isJokerType(t));
+  if(!nj.length) return set.length>=3;
+  const col=nj[0].color;
+  for(const t of nj) if(t.color!==col) return false;
+  // Count joker slots: regular joker = 1 slot, double joker = 2 consecutive slots
+  const regJ=set.filter(t=>t.color==='joker').length;
+  const dblJ=set.filter(t=>t.color==='double').length;
+  const totalSlots=nj.length+regJ+dblJ*2;
+  if(totalSlots<3) return false;
+  const nums=nj.map(t=>t.number).sort((a,b)=>a-b);
+  for(let i=1;i<nums.length;i++) if(nums[i]===nums[i-1]) return false;
+  const mn=nums[0],mx=nums[nums.length-1];
+  for(let st=Math.max(1,mx-totalSlots+1);st<=mn;st++){
+    const en=st+totalSlots-1;if(en>13)continue;
+    let need=0;const u=[...nums];
+    for(let n=st;n<=en;n++){const idx=u.indexOf(n);if(idx>=0)u.splice(idx,1);else need++}
+    if(!u.length&&need<=regJ+dblJ*2) return true;
+  }
+  return false;
+}
+
+function isRunColorChange(set){
+  // Color-change joker connects two different colored segments of a run
+  // Tiles before CC must be one color, tiles after must be different color
+  const ccIdx=[];set.forEach((t,i)=>{if(t.color==='colorchange')ccIdx.push(i)});
+  if(ccIdx.length===0) return false;
+  // Simple case: one CC joker
+  if(ccIdx.length===1){
+    const ci=ccIdx[0];
+    const left=set.slice(0,ci).filter(t=>!isJokerType(t));
+    const right=set.slice(ci+1).filter(t=>!isJokerType(t));
+    if(!left.length||!right.length) return set.length>=3; // flexible
+    const lc=left[0].color,rc=right[0].color;
+    if(lc===rc) return false; // must change color
+    for(const t of left) if(t.color!==lc) return false;
+    for(const t of right) if(t.color!==rc) return false;
+    // Numbers must form a consecutive sequence
+    const allNums=set.filter(t=>!isJokerType(t)).map(t=>t.number).sort((a,b)=>a-b);
+    for(let i=1;i<allNums.length;i++) if(allNums[i]===allNums[i-1]) return false;
+    const jokerSlots=set.filter(t=>t.color==='joker').length+set.filter(t=>t.color==='double').length*2+1;
+    const totalLen=allNums.length+jokerSlots;
+    if(totalLen<3) return false;
+    const mn=allNums[0],mx=allNums[allNums.length-1];
+    return mx-mn+1<=totalLen&&mx<=13&&mn>=1;
+  }
+  return false; // Multiple CC jokers — simplified
+}
+
+function isGroupMirror(set){
+  // Mirror joker in group: left side mirrors right side
+  const mi=set.findIndex(t=>t.color==='mirror');
+  if(mi<0) return false;
+  const left=set.slice(0,mi);const right=set.slice(mi+1);
+  if(left.length===0||right.length===0) return false;
+  if(left.length!==right.length) return false;
+  // Each side must be valid part of a group (same number, different colors)
+  const ln=left.filter(t=>!isJokerType(t));const rn=right.filter(t=>!isJokerType(t));
+  if(ln.length===0&&rn.length===0) return left.length>=1;
+  const num=(ln[0]||rn[0]).number;
+  for(const t of [...ln,...rn]) if(t.number!==num) return false;
+  // Colors should not repeat across both sides
+  const allColors=new Set();
+  for(const t of [...ln,...rn]){if(allColors.has(t.color))return false;allColors.add(t.color)}
+  return set.length>=3;
+}
+
+function isRunMirror(set){
+  // Mirror joker in run: left side numbers mirror right side
+  const mi=set.findIndex(t=>t.color==='mirror');
+  if(mi<0) return false;
+  const left=set.slice(0,mi);const right=set.slice(mi+1);
+  if(left.length===0||right.length===0) return false;
+  if(left.length!==right.length) return false;
+  // Both sides should be same color
+  const allNJ=[...left,...right].filter(t=>!isJokerType(t));
+  if(!allNJ.length) return set.length>=3;
+  const col=allNJ[0].color;
+  for(const t of allNJ) if(t.color!==col) return false;
+  // Left numbers in ascending, right must mirror (descending = same sequence reversed)
+  const lnums=left.filter(t=>!isJokerType(t)).map(t=>t.number);
+  const rnums=right.filter(t=>!isJokerType(t)).map(t=>t.number);
+  // The sequence should be symmetric around the mirror
+  // e.g., 3,4,5,Mirror,5,4,3
+  const reversed=[...rnums].reverse();
+  for(let i=0;i<Math.min(lnums.length,reversed.length);i++){
+    if(lnums[i]!==reversed[i]) return false;
+  }
+  // Check consecutive
+  if(lnums.length>=2){for(let i=1;i<lnums.length;i++)if(lnums[i]!==lnums[i-1]+1)return false}
+  return set.length>=3;
+}
 
 function advanceTurn(){
   gameState.currentTurn=(gameState.currentTurn+1)%gameState.players.length;
@@ -601,9 +768,9 @@ function aiDraw(pi){if(gameState.pool.length>0){gameState.players[pi].hand.push(
 function aiTryMeld(pi){
   const player=gameState.players[pi],hand=player.hand;if(!hand.length)return false;
   const th=aiDifficulty==='easy'?.4:aiDifficulty==='normal'?.7:1;if(Math.random()>th+.3)return false;
-  const byNum={};hand.forEach((t,i)=>{if(t.color!=='joker'){if(!byNum[t.number])byNum[t.number]=[];byNum[t.number].push({t,i})}});
+  const byNum={};hand.forEach((t,i)=>{if(!isJokerType(t)){if(!byNum[t.number])byNum[t.number]=[];byNum[t.number].push({t,i})}});
   for(const num in byNum){const tiles=byNum[num];const cs=new Set(),chosen=[];for(const x of tiles){if(!cs.has(x.t.color)){cs.add(x.t.color);chosen.push(x)}if(chosen.length>=4)break}if(chosen.length>=3){if(!player.hasBrokenIce){const sum=chosen.reduce((s,c)=>s+c.t.number,0);if(sum<30)continue}processMeld(pi,chosen.map(c=>c.i));return true}}
-  const byCol={};hand.forEach((t,i)=>{if(t.color!=='joker'){if(!byCol[t.color])byCol[t.color]=[];byCol[t.color].push({t,i})}});
+  const byCol={};hand.forEach((t,i)=>{if(!isJokerType(t)){if(!byCol[t.color])byCol[t.color]=[];byCol[t.color].push({t,i})}});
   for(const col in byCol){const tiles=byCol[col].sort((a,b)=>a.t.number-b.t.number);const unique=[];const seen=new Set();for(const x of tiles){if(!seen.has(x.t.number)){seen.add(x.t.number);unique.push(x)}}for(let start=0;start<unique.length-2;start++){let run=[unique[start]];for(let j=start+1;j<unique.length;j++){if(unique[j].t.number===run[run.length-1].t.number+1)run.push(unique[j]);else break}if(run.length>=3){if(!player.hasBrokenIce){const sum=run.reduce((s,r)=>s+r.t.number,0);if(sum<30)continue}processMeld(pi,run.map(r=>r.i));return true}}}
   if(aiDifficulty!=='easy'&&gameState.table.length>0&&player.hasBrokenIce){for(let si=0;si<gameState.table.length;si++){const set=gameState.table[si];for(let hi=hand.length-1;hi>=0;hi--){const test=[...set,hand[hi]];if(valSet(test)){processMeld(pi,[hi],si);return true}}}}
   return false;
@@ -721,7 +888,15 @@ function renderHand(hand){
   hand.forEach((tile,i)=>{const el=mkTile(tile);el.dataset.handIndex=i;if(borrowedTileIds.has(tile.id))el.classList.add('borrowed');if(lastDrawnTileId===tile.id)el.classList.add('just-drawn');if(selectedTiles.has(i))el.classList.add('selected');el.onclick=()=>{if(selectedTiles.has(i)){selectedTiles.delete(i);el.classList.remove('selected')}else{selectedTiles.add(i);el.classList.add('selected')}};c.appendChild(el)});
   if(lastDrawnTileId!==null){requestAnimationFrame(()=>c.scrollLeft=c.scrollWidth);lastDrawnTileId=null}
 }
-function mkTile(tile){const el=document.createElement('div');el.className='tile';el.dataset.color=tile.color;el.dataset.tileId=tile.id;if(tile.color==='joker')el.innerHTML='<span class="tile-num">☆</span><span class="tile-dots">JOKER</span>';else el.innerHTML=`<span class="tile-num">${tile.number}</span><span class="tile-dots">${'●'.repeat(Math.min(tile.number,4))}</span>`;return el}
+function mkTile(tile){
+  const el=document.createElement('div');el.className='tile';el.dataset.color=tile.color;el.dataset.tileId=tile.id;
+  if(tile.color==='joker') el.innerHTML='<span class="tile-num">☆</span><span class="tile-dots">JOKER</span>';
+  else if(tile.color==='double') el.innerHTML='<span class="tile-num">⏩</span><span class="tile-dots">雙人</span>';
+  else if(tile.color==='colorchange') el.innerHTML='<span class="tile-num">🔄</span><span class="tile-dots">變色</span>';
+  else if(tile.color==='mirror') el.innerHTML='<span class="tile-num">🪞</span><span class="tile-dots">鏡射</span>';
+  else el.innerHTML=`<span class="tile-num">${tile.number}</span><span class="tile-dots">${'●'.repeat(Math.min(tile.number,4))}</span>`;
+  return el;
+}
 
 // ===== PLAYER ACTIONS =====
 function clearAllSelections(){selectedTiles.clear();selectedTableTiles=[];selectedTableSet=-1;document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));document.querySelectorAll('.tile.table-tile-selected').forEach(t=>t.classList.remove('table-tile-selected'))}
