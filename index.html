@@ -795,6 +795,14 @@ function showWinner(data){
 }
 
 initAvatars();
+
+// Warn before leaving during active game
+window.addEventListener('beforeunload',function(e){
+  if(gameState&&gameState.phase==='playing'){
+    e.preventDefault();
+    e.returnValue='';
+  }
+});
 </script>
 </body>
 </html>
