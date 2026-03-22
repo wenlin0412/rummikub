@@ -607,12 +607,35 @@ function updateTimerBar(){const b=document.getElementById('timerBar');if(!b)retu
 
 // ===== RENDER =====
 let lastRenderedTurn=-1;
+let prevTableTileIds=new Set(); // track table tile IDs between renders for non-host highlight
+
 function renderGame(state){
   currentViewState=state;myPlayerIndex=state.myIndex;
-  // Detect turn change — reset local state for non-host
+  // Detect turn change — reset local state for non-host + detect last played tiles
   if(state.currentTurn!==lastRenderedTurn){
+    const prevTurn=lastRenderedTurn;
     lastRenderedTurn=state.currentTurn;
-    if(!isHost&&!isSoloMode){hasMeldedThisTurn=false;borrowedTileIds=new Set()}
+    if(!isHost&&!isSoloMode){
+      hasMeldedThisTurn=false;borrowedTileIds=new Set();
+      // Detect newly placed tiles on table (by comparing with previous snapshot)
+      if(prevTurn>=0){
+        const newTableIds=new Set();
+        (state.table||[]).forEach(s=>(s||[]).forEach(t=>newTableIds.add(t.id)));
+        lastPlayedTileIds=new Set();
+        newTableIds.forEach(id=>{if(!prevTableTileIds.has(id))lastPlayedTileIds.add(id)});
+        if(lastPlayedTileIds.size>0){
+          if(lastPlayedTimeout)clearTimeout(lastPlayedTimeout);
+          lastPlayedTimeout=setTimeout(()=>{lastPlayedTileIds=new Set();if(currentViewState)renderTable(currentViewState.table)},3000);
+        }
+      }
+    }
+    // Update snapshot
+    prevTableTileIds=new Set();
+    (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
+  } else if(!isHost&&!isSoloMode){
+    // Not a turn change — update snapshot silently for next comparison
+    prevTableTileIds=new Set();
+    (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
   }
   const tp=state.players[state.currentTurn];
   document.getElementById('turnAvatar').textContent=AVATARS[tp.avatar];
@@ -621,9 +644,15 @@ function renderGame(state){
   document.querySelector('.game-header .turn-info').style.color=state.currentTurn===state.myIndex?'var(--accent-orange)':'var(--text-dark)';
   const ob=document.getElementById('opponentsBar');ob.innerHTML='';
   state.players.forEach((p,i)=>{if(i===state.myIndex)return;const c=document.createElement('div');c.className='opponent-card'+(i===state.currentTurn?' active-turn':'');c.innerHTML=`<span class="opp-avatar">${AVATARS[p.avatar]}</span><span>${p.name}${p.isAI?' 🤖':''}</span><span class="tile-count">${p.handCount} 張</span>`;ob.appendChild(c)});
-  // Preserve local sort order for non-host players
+  // Preserve local sort order for ALL players (sort is display-only, never modifies gameState)
   let hand=state.players[state.myIndex].hand||[];
-  if(!isHost&&!isSoloMode&&localHandOrder.length>0&&hand.length>0){
+  if(localHandOrder.length>0&&hand.length>0){
+    // Detect new tiles (tiles in hand not in our local order = just drawn)
+    const oldIds=new Set(localHandOrder);
+    const newTiles=hand.filter(t=>!oldIds.has(t.id));
+    if(newTiles.length===1&&!lastDrawnTileId){
+      lastDrawnTileId=newTiles[0].id;
+    }
     // Re-sort hand according to local order, put new tiles at end
     const orderMap=new Map(localHandOrder.map((id,i)=>([id,i])));
     const sorted=[...hand].sort((a,b)=>{
@@ -632,7 +661,6 @@ function renderGame(state){
       return ai-bi;
     });
     hand=sorted;
-    state.players[state.myIndex].hand=hand;
     localHandOrder=hand.map(t=>t.id);
   } else if(hand.length>0){
     localHandOrder=hand.map(t=>t.id);
@@ -669,40 +697,59 @@ function clearAllSelectionsAndBorrowed(){clearAllSelections();borrowedTileIds=ne
 function sortHand(by){
   if(!currentViewState)return;
   const hand=currentViewState.players[myPlayerIndex].hand;if(!hand)return;
-  if(by==='color')hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});
-  else hand.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
-  clearAllSelections();renderHand(hand);
-  if(isHost||isSoloMode)gameState.players[myPlayerIndex].hand=hand;
-  // For non-host: save local sort order so we can map tile IDs correctly
-  localHandOrder=hand.map(t=>t.id);
+  const sorted=[...hand];
+  if(by==='color')sorted.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});
+  else sorted.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
+  // Only update local display order, never modify gameState
+  localHandOrder=sorted.map(t=>t.id);
+  clearAllSelections();renderHand(sorted);
 }
 
 // Local hand order tracking for non-host players
 let localHandOrder=[];
 
 function getSelectedTileIds(){
-  // Get tile IDs from selected hand indices using currentViewState
-  const hand=currentViewState?.players?.[myPlayerIndex]?.hand;
-  if(!hand)return[];
-  return Array.from(selectedTiles).map(i=>hand[i]?.id).filter(Boolean);
+  // Get tile IDs from selected hand indices using the locally sorted hand displayed to user
+  // We need to use the hand as rendered (sorted by localHandOrder)
+  const rawHand=currentViewState?.players?.[myPlayerIndex]?.hand;
+  if(!rawHand)return[];
+  // Reconstruct the displayed order using localHandOrder
+  let displayHand=rawHand;
+  if(localHandOrder.length>0){
+    const orderMap=new Map(localHandOrder.map((id,i)=>([id,i])));
+    displayHand=[...rawHand].sort((a,b)=>{
+      const ai=orderMap.has(a.id)?orderMap.get(a.id):99999;
+      const bi=orderMap.has(b.id)?orderMap.get(b.id):99999;
+      return ai-bi;
+    });
+  }
+  return Array.from(selectedTiles).map(i=>displayHand[i]?.id).filter(Boolean);
+}
+
+function resolveIdsToIndices(pi,tileIds){
+  // Convert tile IDs to indices in gameState hand
+  const hand=gameState.players[pi].hand;
+  return tileIds.map(id=>hand.findIndex(t=>t.id===id)).filter(i=>i>=0);
 }
 
 function playSelected(){
   if(!selectedTiles.size){showToast('請先選取要出的牌');return}
+  const tileIds=getSelectedTileIds();clearAllSelections();
   if(isHost||isSoloMode){
-    const idx=Array.from(selectedTiles).sort((a,b)=>a-b);clearAllSelections();sendAction({action:'meld',tileIndices:idx});
+    const indices=resolveIdsToIndices(myPlayerIndex,tileIds);
+    sendAction({action:'meld',tileIndices:indices});
   }else{
-    const tileIds=getSelectedTileIds();clearAllSelections();
     hasMeldedThisTurn=true;updateMainBtn();
     mqttSend({type:'gameAction',playerId:myId,action:'meld',tileIds});
   }
 }
 function addToExistingSet(){
   if(!selectedTiles.size){showToast('請先選取牌');return}if(selectedTableSet<0){showToast('請先點擊桌面牌組');return}
+  const tileIds=getSelectedTileIds();const tsi=selectedTableSet;clearAllSelections();
   if(isHost||isSoloMode){
-    const idx=Array.from(selectedTiles).sort((a,b)=>a-b);const tsi=selectedTableSet;clearAllSelections();sendAction({action:'meld',tileIndices:idx,targetSetIndex:tsi});
+    const indices=resolveIdsToIndices(myPlayerIndex,tileIds);
+    sendAction({action:'meld',tileIndices:indices,targetSetIndex:tsi});
   }else{
-    const tileIds=getSelectedTileIds();const tsi=selectedTableSet;clearAllSelections();
     hasMeldedThisTurn=true;updateMainBtn();
     mqttSend({type:'gameAction',playerId:myId,action:'meld',tileIds,targetSetIndex:tsi});
   }
@@ -715,11 +762,11 @@ function splitFromSet(){
 }
 function replaceJoker(){
   if(selectedTiles.size!==1){showToast('請選取手牌中 1 張牌來替換鬼牌');return}if(!selectedTableTiles.length){showToast('請點擊桌面上要替換的鬼牌');return}
-  const jt=selectedTableTiles[0];
+  const jt=selectedTableTiles[0];const tileIds=getSelectedTileIds();clearAllSelections();
   if(isHost||isSoloMode){
-    const hi=Array.from(selectedTiles)[0];clearAllSelections();sendAction({action:'replaceJoker',handTileIndex:hi,setIndex:jt.si,jokerPos:jt.ti});
+    const idx=resolveIdsToIndices(myPlayerIndex,tileIds);
+    sendAction({action:'replaceJoker',handTileIndex:idx[0],setIndex:jt.si,jokerPos:jt.ti});
   }else{
-    const tileIds=getSelectedTileIds();clearAllSelections();
     hasMeldedThisTurn=true;updateMainBtn();
     mqttSend({type:'gameAction',playerId:myId,action:'replaceJoker',tileId:tileIds[0],setIndex:jt.si,jokerPos:jt.ti});
   }
