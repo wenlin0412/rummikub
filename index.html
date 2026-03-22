@@ -621,7 +621,6 @@ function isGroupTwist(set){
 
 function isRunTwist(set){
   if(set.some(t=>t.color==='mirror')) return isRunMirror(set);
-  // Runs can contain: regular tiles, jokers, double jokers, color-change jokers
   const hasCC=set.some(t=>t.color==='colorchange');
   if(hasCC) return isRunColorChange(set);
   // Standard run with regular + double jokers
@@ -629,7 +628,6 @@ function isRunTwist(set){
   if(!nj.length) return set.length>=3;
   const col=nj[0].color;
   for(const t of nj) if(t.color!==col) return false;
-  // Count joker slots: regular joker = 1 slot, double joker = 2 consecutive slots
   const regJ=set.filter(t=>t.color==='joker').length;
   const dblJ=set.filter(t=>t.color==='double').length;
   const totalSlots=nj.length+regJ+dblJ*2;
@@ -637,11 +635,32 @@ function isRunTwist(set){
   const nums=nj.map(t=>t.number).sort((a,b)=>a-b);
   for(let i=1;i<nums.length;i++) if(nums[i]===nums[i-1]) return false;
   const mn=nums[0],mx=nums[nums.length-1];
+  // Try all possible start positions
   for(let st=Math.max(1,mx-totalSlots+1);st<=mn;st++){
     const en=st+totalSlots-1;if(en>13)continue;
-    let need=0;const u=[...nums];
-    for(let n=st;n<=en;n++){const idx=u.indexOf(n);if(idx>=0)u.splice(idx,1);else need++}
-    if(!u.length&&need<=regJ+dblJ*2) return true;
+    // Build gap list: positions in [st..en] not covered by actual tiles
+    const numSet=new Set(nums);
+    const gaps=[];
+    for(let n=st;n<=en;n++){if(!numSet.has(n))gaps.push(n)}
+    // We need to fill these gaps using regJ single jokers and dblJ double jokers
+    // Double joker must fill exactly 2 CONSECUTIVE numbers
+    if(canFillGaps(gaps,regJ,dblJ)) return true;
+  }
+  return false;
+}
+
+function canFillGaps(gaps,regJ,dblJ){
+  // Try to fill gaps with regJ single slots and dblJ consecutive-pair slots
+  // Use recursive backtracking
+  if(gaps.length===0) return regJ>=0&&dblJ>=0;
+  if(regJ<0||dblJ<0) return false;
+  // Try filling first gap with a regular joker
+  if(regJ>0){
+    if(canFillGaps(gaps.slice(1),regJ-1,dblJ)) return true;
+  }
+  // Try filling first two gaps with a double joker (must be consecutive)
+  if(dblJ>0&&gaps.length>=2&&gaps[1]===gaps[0]+1){
+    if(canFillGaps(gaps.slice(2),regJ,dblJ-1)) return true;
   }
   return false;
 }
