@@ -806,7 +806,11 @@
                     isConnecting.value = false;
                 };
 
-                const leaveRoom = () => { if(mqttClient) mqttClient.end(); location.reload(); };
+                const leaveRoom = () => {
+                    if(isHost.value && !isSoloMode.value) mqttSend({type: 'hostLeft'});
+                    if(mqttClient) mqttClient.end();
+                    location.reload();
+                };
 
                 // Game Engine Logic (Host)
                 const createPool = () => {
@@ -957,6 +961,7 @@
                         else if(data.type === 'gameStart') { myIndex.value = data.myIndex; phase.value = 'playing'; startTurnTimer(); }
                         else if(data.type === 'newGame') { myIndex.value = data.myIndex; localHandOrder.value=[]; lastPlayedTileIds.value=[]; borrowedTileIds.value=[]; myPlayedTileIds.value=[]; hasMeldedThisTurn.value=false; phase.value = 'playing'; startTurnTimer(); showToast('新的一局開始！'); }
                         else if(data.type === 'gameOver') { phase.value = 'finished'; gameOverData.value = data; if(turnTimerObj) clearInterval(turnTimerObj); }
+                        else if(data.type === 'hostLeft') { if(turnTimerObj) clearInterval(turnTimerObj); showToast('房主已離開，即將返回主畫面...'); setTimeout(() => { if(mqttClient) mqttClient.end(); location.reload(); }, 2500); }
                     }
                 };
 
