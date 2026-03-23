@@ -88,6 +88,16 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* 手牌區：手機隱藏捲軸，桌機顯示細捲軸 */
+        .hand-area { -ms-overflow-style: none; scrollbar-width: none; }
+        .hand-area::-webkit-scrollbar { display: none; }
+        @media (min-width: 768px) {
+            .hand-area { scrollbar-width: thin; scrollbar-color: #f0a830 transparent; }
+            .hand-area::-webkit-scrollbar { display: block; height: 4px; }
+            .hand-area::-webkit-scrollbar-track { background: transparent; }
+            .hand-area::-webkit-scrollbar-thumb { background: #f0a830; border-radius: 2px; }
+        }
+
         /* Vue 過渡動畫 */
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
@@ -302,7 +312,7 @@
                 </div>
 
                 <!-- 手牌顯示區 -->
-                <div class="flex gap-1.5 md:gap-2 overflow-x-auto py-2 px-1 min-h-[70px] md:min-h-[85px] items-center no-scrollbar" ref="handContainer">
+                <div class="flex gap-1.5 md:gap-2 overflow-x-auto py-2 px-1 min-h-[70px] md:min-h-[85px] md:pb-3 items-center hand-area" ref="handContainer" @wheel.prevent="wheelHand">
                     <div v-for="(tile, i) in displayedHand" :key="tile.id"
                          @click="toggleSelectHandTile(i)"
                          class="w-[34px] h-[48px] md:w-[42px] md:h-[58px] bg-white border-2 border-gray-200 border-b-4 border-r-4 rounded flex flex-col items-center justify-center font-black cursor-pointer relative shrink-0 poly-tile"
@@ -906,9 +916,9 @@
                     if(localHandOrder.value.length > 0 && h.length > 0) {
                         const oldIds = new Set(localHandOrder.value);
                         const newTiles = h.filter(t=>!oldIds.has(t.id));
-                        if(newTiles.length === 1 && !lastDrawnTileId.value) {
-                            lastDrawnTileId.value = newTiles[0].id;
-                            nextTick(() => { if(handContainer.value) handContainer.value.scrollLeft = handContainer.value.scrollWidth; setTimeout(()=>lastDrawnTileId.value=null, 2000); });
+                        if(newTiles.length > 0) {
+                            if(newTiles.length === 1 && !lastDrawnTileId.value) lastDrawnTileId.value = newTiles[0].id;
+                            nextTick(() => { if(handContainer.value) handContainer.value.scrollLeft = handContainer.value.scrollWidth; if(newTiles.length === 1) setTimeout(()=>lastDrawnTileId.value=null, 2000); });
                         }
                         localHand.value = h; localHandOrder.value = displayedHand.value.map(t=>t.id);
                     } else if(h.length > 0) {
@@ -1143,13 +1153,17 @@
                     localHandOrder.value = h.map(t=>t.id); clearSel();
                 };
 
+                const wheelHand = (e) => {
+                    if(handContainer.value) handContainer.value.scrollLeft += e.deltaY || e.deltaX;
+                };
+
                 return {
                     mode, phase, nickname, roomCodeInput, aiCount, aiDiff, avatars, selectedAvatar, showRules, toastMsg, aiThinking, isConnecting,
                     myId, roomCode, isHost, isSoloMode, players, table, poolCount, currentTurn, myIndex, gameOverData,
                     isMyTurn, isCurrentPlayerAI, currentPlayerInfo, opponents, displayedHand, timerWidth, timerColor,
                     selectedHandTiles, selectedTableTiles, selectedTableSet, borrowedTileIds, lastPlayedTileIds, myPlayedTileIds, lastDrawnTileId, hasMeldedThisTurn, handContainer,
                     JOKER_SVGS, handleGo, leaveRoom, startGame, headerAction, restartGame, textColorClass, tableTileClasses, valSet,
-                    toggleSelectHandTile, isSelectedTableTile, selectTableTile, playSelected, addToExistingSet, splitFromSet, replaceJoker, mainBtnClick, undoTurn, sortHand
+                    toggleSelectHandTile, isSelectedTableTile, selectTableTile, playSelected, addToExistingSet, splitFromSet, replaceJoker, mainBtnClick, undoTurn, sortHand, wheelHand
                 };
             }
         }).mount('#app');
