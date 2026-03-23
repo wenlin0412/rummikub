@@ -4,12 +4,12 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
         <title>拉密變臉版 Rummikub Twist - 低面數風</title>
-        <!-- Vue 3 -->
-        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        <!-- Vue 3 (鎖定版本，避免浮動版號) -->
+        <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
         <!-- Tailwind CSS -->
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- MQTT -->
-        <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
         <!-- Fonts -->
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet" />
 
@@ -512,7 +512,7 @@
                     </div>
 
                     <!-- 排序按鈕 -->
-                    <div class="flex justify-center gap-3 mt-1">
+                    <div class="flex justify-center gap-3 mb-2">
                         <button
                             @click="sortHand('color')"
                             class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded-lg font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
@@ -689,6 +689,7 @@
 
         <!-- Vue 3 應用程式邏輯 -->
         <script>
+        window.addEventListener('DOMContentLoaded', function() {
             const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
 
             // ===== 核心驗證邏輯 (保留原始 Twist 規則) =====
@@ -715,8 +716,25 @@
             function valAll(table) {
                 return table.every((s) => valSet(s));
             }
+            // 若牌組含鏡射牌，自動將其移至正中間位置（奇數長度才合法）
+            function normalizeMirrorSet(set) {
+                const mirrorIdx = set.findIndex((t) => t.color === "mirror");
+                if (mirrorIdx < 0) return set;
+                if (set.length % 2 === 0) return set; // 偶數長度不可能有中心
+                const center = Math.floor(set.length / 2);
+                if (mirrorIdx === center) return set;
+                const arr = [...set];
+                arr.splice(mirrorIdx, 1);
+                arr.splice(center, 0, set[mirrorIdx]);
+                return arr;
+            }
             function valSet(set) {
                 if (set.length < 3) return false;
+                if (set.some((t) => t.color === "mirror")) {
+                    if (set.length % 2 === 0) return false;
+                    const norm = normalizeMirrorSet(set);
+                    return isGroupMirror(norm) || isRunMirror(norm);
+                }
                 return isGroupTwist(set) || isRunTwist(set);
             }
 
@@ -1479,7 +1497,12 @@
                         if (engine.currentTurn !== pi || !engine.players[pi].hasBrokenIce) return;
                         const p = engine.players[pi],
                             set = engine.table[si];
-                        if (!set || !set[ti] || set[ti].color !== "joker") return;
+                        if (!set || !set[ti]) return;
+                        // 鏡射牌、雙人百搭、變色百搭均不可被替換，僅紅色百搭（joker）可換出
+                        if (set[ti].color !== "joker") {
+                            sendTP(pi, { type: "toast", msg: "只有普通百搭（紅）可被替換" });
+                            return;
+                        }
                         const ht = p.hand[hti],
                             jt = set[ti],
                             testSet = [...set];
@@ -1955,6 +1978,7 @@
                     };
                 },
             }).mount("#app");
+        }); // end DOMContentLoaded
         </script>
     </body>
 </html>
