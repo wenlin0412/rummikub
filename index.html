@@ -89,7 +89,7 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* 手牌區：手機隱藏捲軸，桌機顯示細捲軸 */
-        .hand-area { -ms-overflow-style: none; scrollbar-width: none; }
+        .hand-area { -ms-overflow-style: none; scrollbar-width: none; user-select: none; -webkit-user-select: none; cursor: grab; }
         .hand-area::-webkit-scrollbar { display: none; }
         @media (min-width: 768px) {
             .hand-area { scrollbar-width: thin; scrollbar-color: #f0a830 transparent; }
@@ -312,7 +312,7 @@
                 </div>
 
                 <!-- 手牌顯示區 -->
-                <div class="flex gap-1.5 md:gap-2 overflow-x-auto py-2 px-1 min-h-[70px] md:min-h-[85px] md:pb-3 items-center hand-area" ref="handContainer" @wheel.prevent="wheelHand">
+                <div class="flex gap-1.5 md:gap-2 overflow-x-auto py-2 px-1 min-h-[70px] md:min-h-[85px] md:pb-3 items-center hand-area" ref="handContainer" @wheel.prevent="wheelHand" @mousedown="handMouseDown" @mousemove="handMouseMove" @mouseup="handMouseUp" @mouseleave="handMouseUp">
                     <div v-for="(tile, i) in displayedHand" :key="tile.id"
                          @click="toggleSelectHandTile(i)"
                          class="w-[34px] h-[48px] md:w-[42px] md:h-[58px] bg-white border-2 border-gray-200 border-b-4 border-r-4 rounded flex flex-col items-center justify-center font-black cursor-pointer relative shrink-0 poly-tile"
@@ -1116,7 +1116,7 @@
                 };
 
                 // UI Interactivity
-                const toggleSelectHandTile = (i) => { const idx = selectedHandTiles.value.indexOf(i); if(idx>=0) selectedHandTiles.value.splice(idx,1); else selectedHandTiles.value.push(i); };
+                const toggleSelectHandTile = (i) => { if(handDrag.moved) return; const idx = selectedHandTiles.value.indexOf(i); if(idx>=0) selectedHandTiles.value.splice(idx,1); else selectedHandTiles.value.push(i); };
                 const isSelectedTableTile = (si, ti) => selectedTableTiles.value.some(x => x.si===si && x.ti===ti);
                 const selectTableTile = (si, ti) => { const idx = selectedTableTiles.value.findIndex(x=>x.si===si&&x.ti===ti); if(idx>=0) selectedTableTiles.value.splice(idx,1); else { selectedTableTiles.value.push({si,ti}); selectedTableSet.value = si; } };
                 const clearSel = () => { selectedHandTiles.value=[]; selectedTableTiles.value=[]; selectedTableSet.value=-1; };
@@ -1162,13 +1162,31 @@
                     if(handContainer.value) handContainer.value.scrollLeft += e.deltaY || e.deltaX;
                 };
 
+                const handDrag = { active: false, startX: 0, scrollLeft: 0, moved: false };
+                const handMouseDown = (e) => {
+                    if(e.button !== 0 || !handContainer.value) return;
+                    handDrag.active = true; handDrag.startX = e.pageX;
+                    handDrag.scrollLeft = handContainer.value.scrollLeft; handDrag.moved = false;
+                    handContainer.value.style.cursor = 'grabbing';
+                };
+                const handMouseMove = (e) => {
+                    if(!handDrag.active || !handContainer.value) return;
+                    const dx = e.pageX - handDrag.startX;
+                    if(Math.abs(dx) > 4) handDrag.moved = true;
+                    handContainer.value.scrollLeft = handDrag.scrollLeft - dx;
+                };
+                const handMouseUp = () => {
+                    handDrag.active = false;
+                    if(handContainer.value) handContainer.value.style.cursor = '';
+                };
+
                 return {
                     mode, phase, nickname, roomCodeInput, aiCount, aiDiff, avatars, selectedAvatar, showRules, toastMsg, aiThinking, isConnecting,
                     myId, roomCode, isHost, isSoloMode, players, table, poolCount, currentTurn, myIndex, gameOverData,
                     isMyTurn, isCurrentPlayerAI, currentPlayerInfo, opponents, displayedHand, timerWidth, timerColor,
                     selectedHandTiles, selectedTableTiles, selectedTableSet, borrowedTileIds, lastPlayedTileIds, myPlayedTileIds, lastDrawnTileId, hasMeldedThisTurn, handContainer,
                     JOKER_SVGS, handleGo, leaveRoom, startGame, headerAction, restartGame, textColorClass, tableTileClasses, valSet,
-                    toggleSelectHandTile, isSelectedTableTile, selectTableTile, playSelected, addToExistingSet, splitFromSet, replaceJoker, mainBtnClick, undoTurn, sortHand, wheelHand
+                    toggleSelectHandTile, isSelectedTableTile, selectTableTile, playSelected, addToExistingSet, splitFromSet, replaceJoker, mainBtnClick, undoTurn, sortHand, wheelHand, handMouseDown, handMouseMove, handMouseUp
                 };
             }
         }).mount('#app');
