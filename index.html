@@ -1167,7 +1167,7 @@
                         // UI States
                         const mode = ref("solo");
                         const phase = ref("lobby");
-                        const nickname = ref("");
+                        const nickname = ref("玩家");
                         const roomCodeInput = ref("");
                         const aiCount = ref(2);
                         const aiDiff = ref("normal");
@@ -2059,7 +2059,7 @@
                             selectedTableSet.value = -1;
                         };
 
-                        const getSelectedIds = () => selectedHandTiles.value.map((i) => displayedHand.value[i]?.id).filter(Boolean);
+                        const getSelectedIds = () => selectedHandTiles.value.map((i) => displayedHand.value[i]?.id).filter((id) => id !== undefined && id !== null);
                         const resolveIds = (ids) => ids.map((id) => engine.players[myIndex.value].hand.findIndex((t) => t.id === id)).filter((i) => i >= 0);
 
                         const sendAction = (a) => {
