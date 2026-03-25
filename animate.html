@@ -15,6 +15,8 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- MQTT -->
         <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+        <!-- GSAP 動畫 -->
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
         <!-- Fonts -->
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet" />
 
@@ -169,6 +171,50 @@
                 display: block;
                 filter: drop-shadow(1px 2px 0 rgba(92, 64, 51, 0.18));
             }
+
+            .icon-svg {
+                width: 1em;
+                height: 1em;
+                display: inline-block;
+                vertical-align: -0.12em;
+            }
+
+            .hud-icon {
+                width: 1rem;
+                height: 1rem;
+                margin-right: 0.25rem;
+            }
+
+            .table-zone {
+                position: relative;
+                isolation: isolate;
+            }
+
+            .particle-layer {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                z-index: 12;
+            }
+
+            .turn-banner {
+                overflow: hidden;
+            }
+
+            .engine-glow {
+                box-shadow: 0 0 0 rgba(255, 155, 94, 0);
+                animation: pulseGlow 2.2s ease-in-out infinite;
+            }
+
+            @keyframes pulseGlow {
+                0%,
+                100% {
+                    box-shadow: 0 0 0 rgba(255, 155, 94, 0);
+                }
+                50% {
+                    box-shadow: 0 0 18px rgba(255, 155, 94, 0.35);
+                }
+            }
         </style>
     </head>
     <body class="text-dark antialiased min-h-screen relative flex items-center justify-center">
@@ -269,9 +315,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-bold text-light mb-1 flex items-center gap-1"
-                                    >AI 難度 <span v-html="ICON_SVGS.diff[aiDiff]" class="inline-block w-4 h-4"></span
-                                ></label>
+                                <label class="block text-sm font-bold text-light mb-1">AI 難度</label>
                                 <select v-model="aiDiff" class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 outline-none font-bold">
                                     <option value="easy">簡單</option>
                                     <option value="normal">普通</option>
@@ -303,9 +347,9 @@
 
                         <button
                             @click="showRules = true"
-                            class="w-full mt-3 py-2.5 bg-white text-orange border-2 border-orange/30 rounded-lg font-bold border-b-4 border-r-4 poly-btn flex items-center justify-center gap-1.5"
+                            class="w-full mt-3 py-2.5 bg-white text-orange border-2 border-orange/30 rounded-lg font-bold border-b-4 border-r-4 poly-btn flex items-center justify-center"
                         >
-                            <span v-html="ICON_SVGS.book" class="inline-block w-4 h-4"></span>先看規則
+                            <span class="icon-svg hud-icon" v-html="iconSvg('book')"></span>先看規則
                         </button>
                     </template>
 
@@ -347,22 +391,22 @@
                 <div class="flex items-center justify-between p-2 md:p-3 bg-white/90 backdrop-blur-sm border-b-2 border-orange/10 shrink-0 shadow-sm z-10">
                     <div class="flex items-center gap-2 font-bold text-sm md:text-base" :class="isMyTurn ? 'text-orange' : 'text-dark'">
                         <div class="w-7 h-7 md:w-8 md:h-8" v-html="avatarSvg(currentPlayerInfo.avatar)"></div>
-                        <span>{{ currentPlayerInfo.name }}<span v-if="currentPlayerInfo.isAI" v-html="ICON_SVGS.robot" class="inline-block w-[1em] h-[1em] align-[-0.2em] mx-1"></span>的回合</span>
+                        <span>{{ currentPlayerInfo.name }}<span v-if="currentPlayerInfo.isAI" class="icon-svg" v-html="iconSvg('robot')"></span> 的回合</span>
                     </div>
                     <div class="flex items-center gap-2 md:gap-3">
                         <button
                             @click="showRules = true"
-                            class="px-2 py-1 bg-white border-2 border-orange/20 rounded font-bold text-xs text-light hover:bg-orange/5 poly-btn border-b-[3px] border-r-[3px] inline-flex items-center gap-1"
+                            class="px-2 py-1 bg-white border-2 border-orange/20 rounded font-bold text-xs text-light hover:bg-orange/5 poly-btn border-b-[3px] border-r-[3px] flex items-center"
                         >
-                            <span v-html="ICON_SVGS.book" class="inline-block w-3.5 h-3.5"></span>規則
+                            <span class="icon-svg hud-icon" v-html="iconSvg('book')"></span>規則
                         </button>
                         <button
                             @click="headerAction"
                             class="px-2 py-1 bg-white border-2 rounded font-bold text-xs poly-btn border-b-[3px] border-r-[3px]"
                             :class="(!isSoloMode && !isHost) ? 'border-tred/30 text-tred hover:bg-tred/5' : 'border-green/30 text-green hover:bg-green/5'"
                         >
-                            <template v-if="!isSoloMode && !isHost"><span v-html="ICON_SVGS.exit" class="inline-block w-3.5 h-3.5 align-[-0.1em] mr-0.5"></span>離開</template
-                            ><template v-else><span v-html="ICON_SVGS.refresh" class="inline-block w-3.5 h-3.5 align-[-0.1em] mr-0.5"></span>新局</template>
+                            <span class="icon-svg" v-html="(!isSoloMode && !isHost) ? iconSvg('door') : iconSvg('refresh')"></span>
+                            {{ (!isSoloMode && !isHost) ? ' 離開' : ' 新局' }}
                         </button>
                         <div class="bg-yellow px-3 py-1 rounded font-black text-xs md:text-sm border-2 border-yellow border-b-[3px] border-r-[3px] poly-shadow-sm">牌堆: {{ poolCount }}</div>
                     </div>
@@ -377,13 +421,14 @@
                         :class="p.isCurrentTurn ? 'border-orange bg-orange/10 shadow-sm' : 'border-transparent'"
                     >
                         <div class="w-6 h-6" v-html="avatarSvg(p.avatar)"></div>
-                        <span>{{ p.name }}<span v-if="p.isAI" v-html="ICON_SVGS.robot" class="inline-block w-[1em] h-[1em] align-[-0.15em] ml-1"></span></span>
+                        <span>{{ p.name }}<span v-if="p.isAI" class="icon-svg" v-html="iconSvg('robot')"></span></span>
                         <span class="bg-pink text-white px-2 py-0.5 rounded ml-1 border-b-2 border-pink/80">{{ p.handCount }} 張</span>
                     </div>
                 </div>
 
                 <!-- 桌面區域 (Table Area) -->
-                <div class="flex-1 overflow-auto p-3 md:p-4" @click="selectedTableSet = -1">
+                <div class="flex-1 overflow-auto p-3 md:p-4 table-zone" ref="tableArea" @click="selectedTableSet = -1">
+                    <canvas ref="particleCanvas" class="particle-layer"></canvas>
                     <div class="flex flex-wrap gap-4 items-start min-h-[100px]">
                         <div
                             v-for="(set, si) in table"
@@ -397,6 +442,7 @@
                                 :key="tile.id"
                                 @click.stop="selectTableTile(si, ti)"
                                 class="w-[34px] h-[46px] md:w-10 md:h-14 bg-white border-2 border-gray-200 border-b-4 border-r-4 rounded flex flex-col items-center justify-center font-black cursor-pointer relative poly-tile"
+                                :data-tile-id="tile.id"
                                 :class="tableTileClasses(tile, si, ti)"
                             >
                                 <!-- 牌面內容渲染 -->
@@ -437,19 +483,17 @@
                 <transition name="fade">
                     <div
                         v-if="showTurnBanner"
-                        class="flex justify-center items-center font-bold text-xs shrink-0"
+                        class="flex justify-center items-center font-bold text-xs shrink-0 turn-banner"
                         :class="isMyTurn ? 'bg-green/15 border-green text-green' : 'bg-orange/10 border-orange text-orange'"
                     >
-                        <span class="animate-pulse mr-1 inline-flex items-center"
-                            ><span v-if="isMyTurn" v-html="ICON_SVGS.myTurn" class="w-5 h-5"></span><span v-else v-html="ICON_SVGS.waiting" class="w-5 h-5"></span
-                        ></span>
+                        <span class="mr-1 text-lg icon-svg" v-html="isMyTurn ? iconSvg('point') : iconSvg('tea')"></span>
                         <span class="py-1">{{ isMyTurn ? '換你出牌了！' : '等待對手出牌' }}</span>
                     </div>
                 </transition>
 
                 <!-- 計時器條 -->
                 <div v-if="showTimerBar" class="h-1.5 w-full bg-gray-200 shrink-0">
-                    <div class="h-full transition-all duration-1000 ease-linear" :class="timerColor" :style="{ width: timerWidth + '%' }"></div>
+                    <div class="h-full transition-all duration-1000 ease-linear" :class="[timerColor, isMyTurn ? 'engine-glow' : '']" :style="{ width: timerWidth + '%' }"></div>
                 </div>
 
                 <!-- 操作區與手牌 -->
@@ -520,6 +564,7 @@
                             :key="tile.id"
                             @click="toggleSelectHandTile(i)"
                             class="w-[34px] h-[48px] md:w-[42px] md:h-[58px] bg-white border-2 border-gray-200 border-b-4 border-r-4 rounded flex flex-col items-center justify-center font-black cursor-pointer relative shrink-0 poly-tile"
+                            :data-tile-id="tile.id"
                             :class="{
                             'tile-selected': selectedHandTiles.includes(i),
                             'border-blue shadow-[0_0_8px_rgba(137,196,225,0.8)]': borrowedTileIds.includes(tile.id),
@@ -563,13 +608,13 @@
                     <div class="flex justify-center gap-3 mb-2">
                         <button
                             @click="sortHand('color')"
-                            class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
+                            class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded-lg font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
                         >
                             顏色排序
                         </button>
                         <button
                             @click="sortHand('number')"
-                            class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
+                            class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded-lg font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
                         >
                             數字排序
                         </button>
@@ -597,9 +642,9 @@
                         <button
                             v-if="isSoloMode || isHost"
                             @click="restartGame"
-                            class="w-full py-3 bg-gradient-to-r from-orange to-[#FF7B3E] text-white font-black rounded-lg border-b-4 border-r-4 border-[#cc6231] poly-btn mb-3 flex items-center justify-center gap-1.5"
+                            class="w-full py-3 bg-gradient-to-r from-orange to-[#FF7B3E] text-white font-black rounded-lg border-b-4 border-r-4 border-[#cc6231] poly-btn mb-3 flex items-center justify-center"
                         >
-                            <span v-html="ICON_SVGS.refresh" class="inline-block w-4 h-4"></span>開新局
+                            <span class="icon-svg hud-icon" v-html="iconSvg('refresh')"></span>開新局
                         </button>
                         <button v-else class="w-full py-3 bg-gray-200 text-gray-500 font-black rounded-lg border-b-4 border-r-4 border-gray-300 mb-3 cursor-not-allowed">等待房主開新局...</button>
 
@@ -613,7 +658,7 @@
                 <div v-if="showRules" @click.self="showRules = false" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <div class="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] border-2 border-orange/20 border-b-8 border-r-8 poly-shadow flex flex-col overflow-hidden">
                         <div class="flex justify-between items-center border-b-2 border-orange/20 pb-3 shrink-0">
-                            <h3 class="text-2xl font-black text-orange tracking-wider flex items-center gap-2"><span v-html="ICON_SVGS.book" class="inline-block w-6 h-6"></span>遊戲規則</h3>
+                            <h3 class="text-2xl font-black text-orange tracking-wider flex items-center"><span class="icon-svg mr-2" v-html="iconSvg('book')"></span>遊戲規則</h3>
                             <button @click="showRules = false" class="text-gray-400 hover:text-dark text-3xl font-black transition-colors">&times;</button>
                         </div>
 
@@ -621,27 +666,27 @@
                             <div class="space-y-6 text-sm md:text-base font-bold text-dark leading-relaxed">
                                 <!-- 基礎規則 -->
                                 <div class="bg-cream p-4 rounded-xl border-2 border-orange/20 border-b-4 border-r-4">
-                                    <p class="mb-2"><span v-html="ICON_SVGS.target" class="inline-block w-5 h-5 align-[-0.2em] mr-0.5"></span> <b>獲勝目標</b>：最先將手牌全部出完的玩家獲勝。</p>
+                                    <p class="mb-2"><span class="icon-svg" v-html="iconSvg('target')"></span> <b>獲勝目標</b>：最先將手牌全部出完的玩家獲勝。</p>
                                     <p class="mb-2">
-                                        <span v-html="ICON_SVGS.ice" class="inline-block w-5 h-5 align-[-0.2em] mr-0.5"></span> <b>破冰行動</b>：首次出牌點數總和必須
-                                        <b>≥ 30 點</b>，且只能使用自己的手牌，不能接續桌面上的牌組。
+                                        <span class="icon-svg" v-html="iconSvg('ice')"></span> <b>破冰行動</b>：首次出牌點數總和必須 <b>≥ 30 點</b>，且只能使用自己的手牌，不能接續桌面上的牌組。
                                     </p>
                                     <p>
-                                        <span v-html="ICON_SVGS.refresh" class="inline-block w-5 h-5 align-[-0.2em] mr-0.5"></span>
-                                        <b>桌面重組</b>：破冰後，可隨意拆分、重組桌面上任何牌組。若回合結束時桌面有無效牌組，將會還原並<b>罰抽 3 張牌</b>。
+                                        <span class="icon-svg" v-html="iconSvg('refresh')"></span> <b>桌面重組</b>：破冰後，可隨意拆分、重組桌面上任何牌組。若回合結束時桌面有無效牌組，將會還原並<b
+                                            >罰抽 3 張牌</b
+                                        >。
                                     </p>
                                 </div>
 
                                 <!-- 牌組組合說明 -->
                                 <div>
-                                    <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span v-html="ICON_SVGS.list" class="inline-block w-5 h-5"></span> 合法牌組組合</h4>
+                                    <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">📋</span> 合法牌組組合</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <!-- 群組 -->
                                         <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
                                             <div class="font-black text-lg mb-1">群組 (Group)</div>
                                             <p class="text-light text-sm mb-2">3 到 4 張<b>數字相同</b>但<b>顏色不同</b>的牌。</p>
                                             <div class="bg-gray-100 p-2 rounded text-xs">
-                                                <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>合法：</span
+                                                <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>合法：</span
                                                 ><span class="text-tred">紅7</span> + <span class="text-tblue">藍7</span> +
                                                 <span class="text-tblack">黑7</span>
                                             </div>
@@ -651,7 +696,7 @@
                                             <div class="font-black text-lg mb-1">順組 (Run)</div>
                                             <p class="text-light text-sm mb-2">3 張以上<b>顏色相同</b>且<b>數字連續</b>的牌。</p>
                                             <div class="bg-gray-100 p-2 rounded text-xs">
-                                                <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>合法：</span
+                                                <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>合法：</span
                                                 ><span class="text-tblue">藍5</span> + <span class="text-tblue">藍6</span> + <span class="text-tblue">藍7</span> + <span class="text-tblue">藍8</span>
                                             </div>
                                         </div>
@@ -660,7 +705,7 @@
 
                                 <!-- 變臉版特殊鬼牌 -->
                                 <div>
-                                    <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span v-html="ICON_SVGS.sparkle" class="inline-block w-5 h-5"></span> 變臉版特殊鬼牌</h4>
+                                    <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="icon-svg" v-html="iconSvg('swirl')"></span> 變臉版特殊鬼牌</h4>
                                     <p class="text-light mb-4">注意：所有鬼牌若在遊戲結束時留於手中，皆會<b>罰扣 30 點</b>。特殊鬼牌(藍/黑/黃)無法被手牌替換取回。</p>
 
                                     <div class="space-y-4">
@@ -668,9 +713,7 @@
                                         <div class="bg-red-50 p-4 rounded-xl border-2 border-red-200 border-b-4 border-r-4">
                                             <div class="flex items-center gap-3 mb-2">
                                                 <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.joker"></div>
-                                                <h5 class="text-lg font-black text-tred flex items-center gap-1.5">
-                                                    <span class="inline-block w-4 h-4 rounded-full bg-tred shrink-0"></span>普通百搭 (紅) × 2
-                                                </h5>
+                                                <h5 class="text-lg font-black text-tred flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('redDot')"></span>普通百搭 (紅) × 2</h5>
                                             </div>
                                             <ul class="list-disc pl-5 space-y-1 text-sm">
                                                 <li>可替代任何數字與顏色的牌。</li>
@@ -683,9 +726,7 @@
                                         <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200 border-b-4 border-r-4">
                                             <div class="flex items-center gap-3 mb-2">
                                                 <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.double"></div>
-                                                <h5 class="text-lg font-black text-tblue flex items-center gap-1.5">
-                                                    <span class="inline-block w-4 h-4 rounded-full bg-tblue shrink-0"></span>雙人百搭 (藍) × 2
-                                                </h5>
+                                                <h5 class="text-lg font-black text-tblue flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('blueDot')"></span>雙人百搭 (藍) × 2</h5>
                                             </div>
                                             <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
                                                 <li><b>順組中：</b>代表 2 個同色<u class="underline-offset-2">連續</u>數字。</li>
@@ -694,12 +735,12 @@
                                             </ul>
                                             <div class="bg-white/70 p-2 rounded text-xs space-y-1">
                                                 <p>
-                                                    <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>合法：</span>黑5 + 黑6
-                                                    + [雙人] + 黑9 (雙人代表黑7與黑8)
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>合法：</span>黑5 + 黑6 + [雙人] +
+                                                    黑9 (雙人代表黑7與黑8)
                                                 </p>
                                                 <p>
-                                                    <span class="text-tred font-black"><span v-html="ICON_SVGS.cross" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>錯誤：</span>黑12 +
-                                                    [雙人] (超出數字13範圍)
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('cross')"></span>錯誤：</span>黑12 + [雙人]
+                                                    (超出數字13範圍)
                                                 </p>
                                             </div>
                                         </div>
@@ -711,9 +752,7 @@
                                                     class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center"
                                                     v-html="JOKER_SVGS.colorchange"
                                                 ></div>
-                                                <h5 class="text-lg font-black text-tblack flex items-center gap-1.5">
-                                                    <span class="inline-block w-4 h-4 rounded bg-tblack shrink-0"></span>變色百搭 (黑白) × 2
-                                                </h5>
+                                                <h5 class="text-lg font-black text-tblack">⬛ 變色百搭 (黑白) × 2</h5>
                                             </div>
                                             <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
                                                 <li><b>只能用於順組！</b></li>
@@ -722,12 +761,12 @@
                                             </ul>
                                             <div class="bg-white/70 p-2 rounded text-xs space-y-1">
                                                 <p>
-                                                    <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>合法：</span>紅3 + 紅4
-                                                    + [變色] + 藍6 + 藍7 (變色佔據數字5)
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>合法：</span>紅3 + 紅4 + [變色] +
+                                                    藍6 + 藍7 (變色佔據數字5)
                                                 </p>
                                                 <p>
-                                                    <span class="text-tred font-black"><span v-html="ICON_SVGS.cross" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>錯誤：</span>紅3 + 紅4
-                                                    + [變色] + 紅6 (前後顏色未改變)
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('cross')"></span>錯誤：</span>紅3 + 紅4 + [變色] +
+                                                    紅6 (前後顏色未改變)
                                                 </p>
                                             </div>
                                         </div>
@@ -736,8 +775,8 @@
                                         <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-300 border-b-4 border-r-4">
                                             <div class="flex items-center gap-3 mb-2">
                                                 <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.mirror"></div>
-                                                <h5 class="text-lg font-black text-yellow-600 flex items-center gap-1.5">
-                                                    <span class="inline-block w-4 h-4 rounded-full bg-tyellow shrink-0"></span>鏡射百搭 (黃) × 2
+                                                <h5 class="text-lg font-black text-yellow-600 flex items-center gap-1">
+                                                    <span class="icon-svg" v-html="iconSvg('yellowDot')"></span>鏡射百搭 (黃) × 2
                                                 </h5>
                                             </div>
                                             <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
@@ -748,16 +787,16 @@
                                             </ul>
                                             <div class="bg-white/70 p-2 rounded text-xs space-y-1">
                                                 <p>
-                                                    <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>合法順組：</span>紅3 +
-                                                    紅4 + [鏡射] + 紅4 + 紅3
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>合法順組：</span>紅3 + 紅4 + [鏡射]
+                                                    + 紅4 + 紅3
                                                 </p>
                                                 <p>
-                                                    <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>合法群組：</span>黑7 +
-                                                    藍7 + [鏡射] + 藍7 + 黑7
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>合法群組：</span>黑7 + 藍7 + [鏡射]
+                                                    + 藍7 + 黑7
                                                 </p>
                                                 <p>
-                                                    <span class="text-green font-black"><span v-html="ICON_SVGS.check" class="inline-block w-4 h-4 align-[-0.15em] mr-0.5"></span>邊界可用：</span>紅1 +
-                                                    [鏡射] + 紅1、黃12 + [鏡射] + 黃12
+                                                    <span class="font-black inline-flex items-center gap-1"><span class="icon-svg" v-html="iconSvg('check')"></span>邊界可用：</span>紅1 + [鏡射] +
+                                                    紅1、黃12 + [鏡射] + 黃12
                                                 </p>
                                             </div>
                                         </div>
@@ -795,31 +834,30 @@
                     `<svg class="avatar-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="40" r="36" fill="#DFF4E5"/><circle cx="40" cy="44" r="20" fill="#FFF"/><path d="M24 27 Q40 14 56 27" fill="#7ECE8A"/><circle cx="33" cy="42" r="2.8" fill="#35543A"/><circle cx="47" cy="42" r="2.8" fill="#35543A"/><path d="M34 52 Q40 57 46 52" stroke="#4F8D5A" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="19" cy="31" r="5" fill="#7ECE8A"/><circle cx="61" cy="31" r="5" fill="#7ECE8A"/></svg>`,
                     `<svg class="avatar-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="40" r="36" fill="#FFEFC0"/><circle cx="40" cy="45" r="20" fill="#FFF8F0"/><path d="M22 29 Q40 10 58 29" fill="#FFD166"/><circle cx="33" cy="42" r="2.8" fill="#5C4033"/><circle cx="47" cy="42" r="2.8" fill="#5C4033"/><path d="M33 51 Q40 56 47 51" stroke="#D4940A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M19 26 Q25 14 31 26" fill="#FFD166"/><path d="M49 26 Q55 14 61 26" fill="#FFD166"/></svg>`,
                 ];
-                const JOKER_SVGS = {
-                    joker: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#FFFFFF" fill-opacity=".15" stroke="#E8564A" stroke-width="2.5"/><circle cx="14" cy="17" r="2.2" fill="#E8564A"/><circle cx="26" cy="17" r="2.2" fill="#E8564A"/><path d="M12 25 Q20 32 28 25" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/><path d="M11 13.5 Q14.5 10.5 18 13.5" stroke="#E8564A" stroke-width="1.8" stroke-linecap="round"/><path d="M22 13.5 Q25.5 10.5 29 13.5" stroke="#E8564A" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-                    double: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="15" cy="20" r="14" fill="#FFFFFF" fill-opacity=".9" stroke="#4A8FE8" stroke-width="2" stroke-opacity=".85"></circle><circle cx="8" cy="17" r="2" fill="#4A8FE8" fill-opacity=".85"></circle><path d="M5.5 13.5 Q8 11 10.5 13.5" stroke="#4A8FE8" stroke-width="1.5" stroke-linecap="round" stroke-opacity=".85"></path><path d="M6 24 Q11 29.5 16 24" stroke="#4A8FE8" stroke-width="1.5" stroke-linecap="round" stroke-opacity=".8"></path><circle cx="25" cy="20" r="14" fill="#FFFFFF" fill-opacity=".8" stroke="#4A8FE8" stroke-width="2"></circle><circle cx="21" cy="17" r="2.2" fill="#4A8FE8"></circle><circle cx="29" cy="17" r="2.2" fill="#4A8FE8"></circle><path d="M18.5 13.5 Q21 11 23.5 13.5" stroke="#4A8FE8" stroke-width="1.8" stroke-linecap="round"></path><path d="M26.5 13.5 Q29 11 31.5 13.5" stroke="#4A8FE8" stroke-width="1.8" stroke-linecap="round"></path><path d="M19 25 Q25 31 31 25" stroke="#4A8FE8" stroke-width="2" stroke-linecap="round"></path></svg>`,
-                    colorchange: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 4 A16 16 0 0 0 20 36 L20 4 Z" fill="#FFFFFF" stroke="#4A4A4A" stroke-width="2" stroke-linejoin="round"/><path d="M20 4 A16 16 0 0 1 20 36 L20 4 Z" fill="#3A3A3A" stroke="#3A3A3A" stroke-width="2" stroke-linejoin="round"/><circle cx="14" cy="17" r="2.2" fill="#3A3A3A"/><circle cx="26" cy="17" r="2.2" fill="#e8e8e8"/><path d="M12 24.5 Q16 30 20 24.5" stroke="#3A3A3A" stroke-width="1.8" stroke-linecap="round"/><path d="M20 24.5 Q24 30 28 24.5" stroke="#e8e8e8" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-                    mirror: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 6 A14 14 0 0 0 18 34" fill="#D4940A" fill-opacity=".12" stroke="#D4940A" stroke-width="2.2"/><circle cx="13" cy="16.5" r="2" fill="#D4940A"/><path d="M10 23.5 Q14 28 18 23.5" stroke="#D4940A" stroke-width="1.8" stroke-linecap="round"/><path d="M22 6 A14 14 0 0 1 22 34" fill="#D4940A" fill-opacity=".12" stroke="#D4940A" stroke-width="2.2"/><circle cx="27" cy="16.5" r="2" fill="#D4940A"/><path d="M22 23.5 Q26 28 30 23.5" stroke="#D4940A" stroke-width="1.8" stroke-linecap="round"/><line x1="20" y1="6" x2="20" y2="34" stroke="#D4940A" stroke-width="1" stroke-dasharray="2.5 2.5" stroke-opacity=".35"/></svg>`,
-                };
-
                 const ICON_SVGS = {
-                    robot: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="8.5" width="14" height="8" rx="2" fill="#5C4033" opacity=".18" stroke="#5C4033" stroke-width="1.5"/><rect x="6.5" y="3.5" width="7" height="5.5" rx="1.5" fill="#5C4033" opacity=".18" stroke="#5C4033" stroke-width="1.5"/><line x1="10" y1="3.5" x2="10" y2="2" stroke="#5C4033" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="1.5" r="1" fill="#5C4033"/><circle cx="7.5" cy="13" r="1.5" fill="#5C4033"/><circle cx="12.5" cy="13" r="1.5" fill="#5C4033"/><line x1="1.5" y1="12" x2="3" y2="12" stroke="#5C4033" stroke-width="1.5" stroke-linecap="round"/><line x1="17" y1="12" x2="18.5" y2="12" stroke="#5C4033" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-                    book: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="2" width="13" height="16" rx="1.5" fill="#FF9B5E" opacity=".18" stroke="#FF9B5E" stroke-width="1.5"/><line x1="3.5" y1="2" x2="3.5" y2="18" stroke="#FF9B5E" stroke-width="2.5" stroke-linecap="round"/><line x1="7.5" y1="7" x2="13.5" y2="7" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="7.5" y1="14" x2="11" y2="14" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-                    refresh: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 10a6.5 6.5 0 0 1 11-4.3" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round"/><path d="M16.5 10a6.5 6.5 0 0 1-11 4.3" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round"/><path d="M11.5 3.2L15.5 5.8 12.5 9.2" fill="none" stroke="#7ECE8A" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M8.5 16.8L4.5 14.2 7.5 10.8" fill="none" stroke="#7ECE8A" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
-                    exit: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 4H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3.5" stroke="#E8564A" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="10" x2="17" y2="10" stroke="#E8564A" stroke-width="1.8" stroke-linecap="round"/><path d="M14 7l3 3-3 3" fill="none" stroke="#E8564A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-                    myTurn: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="#7ECE8A" opacity=".2" stroke="#7ECE8A" stroke-width="1.5"/><path d="M7.5 10h5" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round"/><path d="M10 7.5l2.5 2.5-2.5 2.5" fill="none" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-                    waiting: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="#FF9B5E" opacity=".2" stroke="#FF9B5E" stroke-width="1.5"/><circle cx="7" cy="10" r="1.5" fill="#FF9B5E"/><circle cx="10" cy="10" r="1.5" fill="#FF9B5E"/><circle cx="13" cy="10" r="1.5" fill="#FF9B5E"/></svg>`,
-                    target: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#FF9B5E" stroke-width="1.8"/><circle cx="10" cy="10" r="4.5" stroke="#FF9B5E" stroke-width="1.5" opacity=".7"/><circle cx="10" cy="10" r="2" fill="#FF9B5E"/></svg>`,
-                    ice: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="2" x2="10" y2="18" stroke="#89C4E1" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="10" x2="18" y2="10" stroke="#89C4E1" stroke-width="1.8" stroke-linecap="round"/><line x1="4.3" y1="4.3" x2="15.7" y2="15.7" stroke="#89C4E1" stroke-width="1.5" stroke-linecap="round"/><line x1="15.7" y1="4.3" x2="4.3" y2="15.7" stroke="#89C4E1" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="2.5" fill="#89C4E1"/></svg>`,
-                    list: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="14" height="15" rx="1.5" fill="#FF9B5E" opacity=".12" stroke="#FF9B5E" stroke-width="1.5"/><rect x="6.5" y="1.5" width="7" height="3.5" rx="1" fill="#FF9B5E" opacity=".25" stroke="#FF9B5E" stroke-width="1.2"/><line x1="6.5" y1="9" x2="13.5" y2="9" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="6.5" y1="12" x2="13.5" y2="12" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="6.5" y1="15" x2="10.5" y2="15" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-                    sparkle: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2l1.8 5.2 5.4.5-4 3.3 1.4 5.5L10 13.5l-4.6 3 1.4-5.5-4-3.3 5.4-.5Z" fill="#FF9B5E" opacity=".3" stroke="#FF9B5E" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
-                    check: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="#7ECE8A" opacity=".2" stroke="#7ECE8A" stroke-width="1.5"/><path d="M6 10.5l3 3 5-6" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-                    cross: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="#E8564A" opacity=".2" stroke="#E8564A" stroke-width="1.5"/><line x1="7" y1="7" x2="13" y2="13" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/><line x1="13" y1="7" x2="7" y2="13" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/></svg>`,
-                    diff: {
-                        easy: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17 C10 13 7 10 7 6 C9 4 13 5 14 8 C15 12 12 15 10 17Z" fill="#7ECE8A" opacity=".35" stroke="#7ECE8A" stroke-width="1.5" stroke-linejoin="round"/><line x1="10" y1="17" x2="10" y2="12" stroke="#7ECE8A" stroke-width="1.3" stroke-linecap="round"/></svg>`,
-                        normal: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="4" fill="#FF9B5E" opacity=".3" stroke="#FF9B5E" stroke-width="1.5"/><line x1="10" y1="2.5" x2="10" y2="4.5" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="15.5" x2="10" y2="17.5" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="2.5" y1="10" x2="4.5" y2="10" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="15.5" y1="10" x2="17.5" y2="10" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="4.7" y1="4.7" x2="6.1" y2="6.1" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="13.9" y1="13.9" x2="15.3" y2="15.3" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="15.3" y1="4.7" x2="13.9" y2="6.1" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/><line x1="6.1" y1="13.9" x2="4.7" y2="15.3" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-                        hard: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2 C8 5 5 8 7 12 C8 14 9 14.5 10 14 C11 14.5 12 14 13 12 C15 8 12 5 10 2Z" fill="#E8564A" opacity=".35" stroke="#E8564A" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 12.5 C9 15 8.5 15.5 10 17.5 C11.5 15.5 11 15 11 12.5" fill="#E8564A" opacity=".5"/></svg>`,
-                    },
+                    book: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 5a3 3 0 0 1 3-3h12v18H7a3 3 0 0 0-3 3V5z" fill="#FF9B5E"/><path d="M7 2h10v16H7a3 3 0 0 0-3 3V5a3 3 0 0 1 3-3z" fill="#FFF8F0" stroke="#FF9B5E" stroke-width="1.2"/></svg>`,
+                    door: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 3h12v18H5z" fill="#E8564A"/><circle cx="13" cy="12" r="1.5" fill="#FFF8F0"/><path d="M2 12h6" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/></svg>`,
+                    refresh: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5" fill="none" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 12a8 8 0 1 1-2.4-5.7" fill="none" stroke="#7ECE8A" stroke-width="2" stroke-linecap="round"/></svg>`,
+                    robot: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="7" width="14" height="12" rx="3" fill="#89C4E1"/><circle cx="10" cy="13" r="1.4" fill="#fff"/><circle cx="14" cy="13" r="1.4" fill="#fff"/><path d="M9 17h6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M12 4v3" stroke="#89C4E1" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="3" r="1" fill="#89C4E1"/></svg>`,
+                    point: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 4h8v8h4v4h-4v4H8v-4H4v-4h4z" fill="#7ECE8A"/></svg>`,
+                    tea: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-6z" fill="#FFB5C2"/><path d="M16 11h2a2 2 0 1 1 0 4h-2" fill="none" stroke="#FFB5C2" stroke-width="2"/><path d="M7 7c0-1 1-1.5 1-2.5M11 7c0-1 1-1.5 1-2.5" stroke="#FF9B5E" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+                    leaf: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 14c0-6 6-10 14-10-1 8-5 14-11 14-2 0-3-1-3-4z" fill="#7ECE8A"/><path d="M7 15c4-1 8-5 10-9" stroke="#4F8D5A" stroke-width="1.8" fill="none"/></svg>`,
+                    sprout: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 20v-7" stroke="#4F8D5A" stroke-width="2"/><path d="M12 13c-4 0-6-2-6-6 4 0 6 2 6 6z" fill="#7ECE8A"/><path d="M12 13c4 0 6-2 6-6-4 0-6 2-6 6z" fill="#89C4E1"/></svg>`,
+                    fire: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 3c1 3-1 4-1 6 0 2 2 3 2 5a4 4 0 1 1-8 0c0-4 3-6 5-8 1-1 1-2 2-3z" fill="#FF9B5E"/><path d="M12 10c.6 1.2-.2 2-.2 2.9a2.2 2.2 0 1 0 4.4 0c0-1.6-1-2.5-2.2-3.8-.8.2-1.5.5-2 .9z" fill="#E8564A"/></svg>`,
+                    target: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#FFD166"/><circle cx="12" cy="12" r="6" fill="#FFF8F0"/><circle cx="12" cy="12" r="3" fill="#E8564A"/></svg>`,
+                    ice: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l8 4v12l-8 4-8-4V6z" fill="#BFE8FF" stroke="#89C4E1" stroke-width="1.2"/></svg>`,
+                    swirl: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4a8 8 0 1 0 8 8" fill="none" stroke="#FF9B5E" stroke-width="2.2" stroke-linecap="round"/><path d="M20 12l-4-1 1 4" fill="#FF9B5E"/></svg>`,
+                    check: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#7ECE8A"/><path d="M7 12.5l3 3L17 9" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+                    cross: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#E8564A"/><path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`,
+                    redDot: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#E8564A"/></svg>`,
+                    blueDot: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#4A8FE8"/></svg>`,
+                    yellowDot: `<svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#D4940A"/></svg>`,
+                };
+                const JOKER_SVGS = {
+                    joker: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#E8564A" stroke-width="2.5"/><circle cx="14" cy="16" r="1.8" fill="#E8564A"/><circle cx="26" cy="16" r="1.8" fill="#E8564A"/><path d="M12 24 Q20 31 28 24" fill="none" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/><path d="M11 13 Q14 10 17 13" fill="none" stroke="#E8564A" stroke-width="1.2"/><path d="M23 13 Q26 10 29 13" fill="none" stroke="#E8564A" stroke-width="1.2"/></svg>`,
+                    double: `<svg viewBox="0 0 40 40"><ellipse cx="16" cy="20" rx="12" ry="14" fill="none" stroke="#4A8FE8" stroke-width="2"/><circle cx="13" cy="17" r="1.5" fill="#4A8FE8"/><path d="M10 23 Q15 27 20 23" fill="none" stroke="#4A8FE8" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="24" cy="20" rx="12" ry="14" fill="none" stroke="#4A8FE8" stroke-width="2" opacity=".5"/></svg>`,
+                    colorchange: `<svg viewBox="0 0 40 40"><defs><clipPath id="ccL"><rect x="0" y="0" width="20" height="40"/></clipPath><clipPath id="ccR"><rect x="20" y="0" width="20" height="40"/></clipPath></defs><circle cx="20" cy="20" r="15" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="20" cy="20" r="15" fill="#333" clip-path="url(#ccR)"/><circle cx="15" cy="16" r="1.8" fill="#333"/><circle cx="25" cy="16" r="1.8" fill="#fff"/><path d="M13 24 Q20 30 27 24" fill="none" stroke="#333" stroke-width="1.5" clip-path="url(#ccL)"/><path d="M13 24 Q20 30 27 24" fill="none" stroke="#fff" stroke-width="1.5" clip-path="url(#ccR)"/></svg>`,
+                    mirror: `<svg viewBox="0 0 40 40"><path d="M18 6 A14 14 0 0 0 18 34" fill="none" stroke="#D4940A" stroke-width="2.2"/><circle cx="13" cy="16" r="1.5" fill="#D4940A"/><path d="M10 23 Q14 27 18 23" fill="none" stroke="#D4940A" stroke-width="1.5" stroke-linecap="round"/><path d="M22 6 A14 14 0 0 1 22 34" fill="none" stroke="#D4940A" stroke-width="2.2"/><circle cx="27" cy="16" r="1.5" fill="#D4940A"/><path d="M22 23 Q26 27 30 23" fill="none" stroke="#D4940A" stroke-width="1.5" stroke-linecap="round"/></svg>`,
                 };
 
                 function isJokerType(t) {
@@ -1179,6 +1217,8 @@
                         const aiThinking = ref(false);
                         const isConnecting = ref(false);
                         const isPageActive = ref(!document.hidden && document.hasFocus());
+                        const tableArea = ref(null);
+                        const particleCanvas = ref(null);
 
                         let toastTimer = null;
                         const showToast = (msg, dur = 3000) => {
@@ -1187,6 +1227,7 @@
                             toastTimer = setTimeout(() => (toastMsg.value = ""), dur);
                         };
                         const avatarSvg = (idx) => AVATAR_SVGS[idx] || AVATAR_SVGS[0];
+                        const iconSvg = (name) => ICON_SVGS[name] || "";
 
                         // Network & Auth
                         const myId = ref("");
@@ -1214,6 +1255,11 @@
                         const lastDrawnTileId = ref(null);
                         const hasMeldedThisTurn = ref(false);
                         const handContainer = ref(null);
+                        const particleState = {
+                            list: [],
+                            rafId: null,
+                            ctx: null,
+                        };
 
                         // Timer
                         const turnTimeLeft = ref(120);
@@ -2150,27 +2196,151 @@
                             clearSel();
                         };
 
+                        const resizeParticleCanvas = () => {
+                            if (!particleCanvas.value || !tableArea.value) return;
+                            const rect = tableArea.value.getBoundingClientRect();
+                            particleCanvas.value.width = Math.max(1, Math.floor(rect.width * window.devicePixelRatio));
+                            particleCanvas.value.height = Math.max(1, Math.floor(rect.height * window.devicePixelRatio));
+                            particleCanvas.value.style.width = `${Math.floor(rect.width)}px`;
+                            particleCanvas.value.style.height = `${Math.floor(rect.height)}px`;
+                            particleState.ctx = particleCanvas.value.getContext("2d");
+                            particleState.ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+                        };
+
+                        const spawnParticles = (x, y, color = "#FF9B5E") => {
+                            for (let i = 0; i < 18; i++) {
+                                const angle = (Math.PI * 2 * i) / 18 + Math.random() * 0.2;
+                                const speed = 1.2 + Math.random() * 2.2;
+                                particleState.list.push({
+                                    x,
+                                    y,
+                                    vx: Math.cos(angle) * speed,
+                                    vy: Math.sin(angle) * speed - 0.8,
+                                    life: 38 + Math.floor(Math.random() * 14),
+                                    radius: 1.5 + Math.random() * 2.3,
+                                    color,
+                                });
+                            }
+                        };
+
+                        const emitTableBurst = (color = "#FF9B5E") => {
+                            if (!tableArea.value) return;
+                            const rect = tableArea.value.getBoundingClientRect();
+                            spawnParticles(rect.width * 0.5, Math.max(24, rect.height * 0.28), color);
+                        };
+
+                        const tickParticles = () => {
+                            if (!particleState.ctx || !particleCanvas.value) {
+                                particleState.rafId = requestAnimationFrame(tickParticles);
+                                return;
+                            }
+                            const ctx = particleState.ctx;
+                            const w = particleCanvas.value.clientWidth;
+                            const h = particleCanvas.value.clientHeight;
+                            ctx.clearRect(0, 0, w, h);
+                            particleState.list = particleState.list.filter((p) => p.life > 0);
+                            for (const p of particleState.list) {
+                                p.x += p.vx;
+                                p.y += p.vy;
+                                p.vy += 0.05;
+                                p.vx *= 0.985;
+                                p.life -= 1;
+                                const alpha = Math.max(0, p.life / 50);
+                                ctx.globalAlpha = alpha;
+                                ctx.fillStyle = p.color;
+                                ctx.beginPath();
+                                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                            ctx.globalAlpha = 1;
+                            particleState.rafId = requestAnimationFrame(tickParticles);
+                        };
+
+                        const animateTileById = (tileId) => {
+                            if (typeof gsap === "undefined") return;
+                            const target = document.querySelector(`[data-tile-id="${tileId}"]`);
+                            if (!target) return;
+                            gsap.fromTo(
+                                target,
+                                { scale: 0.82, y: -10, rotate: -2, filter: "drop-shadow(0 0 0 rgba(255,155,94,0))" },
+                                {
+                                    scale: 1,
+                                    y: 0,
+                                    rotate: 0,
+                                    duration: 0.38,
+                                    ease: "back.out(1.9)",
+                                    filter: "drop-shadow(0 6px 12px rgba(255,155,94,0.32))",
+                                    clearProps: "filter",
+                                },
+                            );
+                        };
+
+                        watch(showTurnBanner, (visible) => {
+                            if (!visible || typeof gsap === "undefined") return;
+                            const el = document.querySelector(".turn-banner");
+                            if (!el) return;
+                            gsap.fromTo(el, { y: -8, opacity: 0.2 }, { y: 0, opacity: 1, duration: 0.24, ease: "power2.out" });
+                        });
+
+                        watch(lastDrawnTileId, (id) => {
+                            if (!id) return;
+                            animateTileById(id);
+                            emitTableBurst("#7ECE8A");
+                        });
+
+                        watch(
+                            () => myPlayedTileIds.value.slice(),
+                            (ids, prevIds) => {
+                                if (!ids || ids.length === 0) return;
+                                const prev = new Set(prevIds || []);
+                                ids.forEach((id) => {
+                                    if (!prev.has(id)) animateTileById(id);
+                                });
+                                emitTableBurst("#FF9B5E");
+                            },
+                        );
+
                         const wheelHand = (e) => {
                             if (handContainer.value) handContainer.value.scrollLeft += e.deltaY || e.deltaX;
                         };
 
-                        const handDrag = { active: false, startX: 0, scrollLeft: 0, moved: false };
+                        const handDrag = { active: false, startX: 0, scrollLeft: 0, moved: false, lastX: 0, velocityX: 0, raf: null };
                         const handMouseDown = (e) => {
                             if (e.button !== 0 || !handContainer.value) return;
+                            if (handDrag.raf) {
+                                cancelAnimationFrame(handDrag.raf);
+                                handDrag.raf = null;
+                            }
                             handDrag.active = true;
                             handDrag.startX = e.pageX;
                             handDrag.scrollLeft = handContainer.value.scrollLeft;
                             handDrag.moved = false;
+                            handDrag.lastX = e.pageX;
+                            handDrag.velocityX = 0;
                             handContainer.value.style.cursor = "grabbing";
                         };
                         const handMouseMove = (e) => {
                             if (!handDrag.active || !handContainer.value) return;
                             const dx = e.pageX - handDrag.startX;
+                            handDrag.velocityX = e.pageX - handDrag.lastX;
+                            handDrag.lastX = e.pageX;
                             if (Math.abs(dx) > 4) handDrag.moved = true;
                             handContainer.value.scrollLeft = handDrag.scrollLeft - dx;
                         };
                         const handMouseUp = () => {
+                            if (!handContainer.value) return;
                             handDrag.active = false;
+                            const inertia = () => {
+                                if (!handContainer.value) return;
+                                handDrag.velocityX *= 0.92;
+                                if (Math.abs(handDrag.velocityX) < 0.2) {
+                                    handDrag.raf = null;
+                                    return;
+                                }
+                                handContainer.value.scrollLeft -= handDrag.velocityX * 2.2;
+                                handDrag.raf = requestAnimationFrame(inertia);
+                            };
+                            if (Math.abs(handDrag.velocityX) > 0.6) handDrag.raf = requestAnimationFrame(inertia);
                             if (handContainer.value) handContainer.value.style.cursor = "";
                         };
 
@@ -2181,6 +2351,14 @@
                             window.addEventListener("focus", syncPageActive);
                             window.addEventListener("blur", syncPageActive);
                             document.addEventListener("visibilitychange", syncPageActive);
+                            window.addEventListener("resize", resizeParticleCanvas);
+                            nextTick(() => {
+                                resizeParticleCanvas();
+                                tickParticles();
+                                if (typeof gsap !== "undefined") {
+                                    gsap.from(".poly-shadow", { y: 10, opacity: 0, duration: 0.45, ease: "power2.out" });
+                                }
+                            });
                         });
 
                         return {
@@ -2193,6 +2371,7 @@
                             drawInsertSide,
                             avatars,
                             avatarSvg,
+                            iconSvg,
                             selectedAvatar,
                             showRules,
                             toastMsg,
@@ -2226,8 +2405,9 @@
                             lastDrawnTileId,
                             hasMeldedThisTurn,
                             handContainer,
+                            tableArea,
+                            particleCanvas,
                             JOKER_SVGS,
-                            ICON_SVGS,
                             handleGo,
                             leaveRoom,
                             startGame,
