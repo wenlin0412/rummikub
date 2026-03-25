@@ -422,13 +422,18 @@
 
                 <!-- 輪到你提示橫幅 -->
                 <transition name="fade">
-                    <div v-if="isMyTurn && !isCurrentPlayerAI" class="flex justify-center items-center bg-green/15 border-green text-green font-bold text-xs shrink-0">
-                        <span class="animate-pulse mr-1 text-lg">🫵</span> 換你出牌了！
+                    <div
+                        v-if="showTurnBanner"
+                        class="flex justify-center items-center font-bold text-xs shrink-0"
+                        :class="isMyTurn ? 'bg-green/15 border-green text-green' : 'bg-orange/10 border-orange text-orange'"
+                    >
+                        <span v-if="isMyTurn" class="animate-pulse mr-1 text-lg">🫵</span>
+                        <span>{{ isMyTurn ? '換你出牌了！' : '等待對手出牌' }}</span>
                     </div>
                 </transition>
 
                 <!-- 計時器條 -->
-                <div class="h-1.5 w-full bg-gray-200 shrink-0">
+                <div v-if="showTimerBar" class="h-1.5 w-full bg-gray-200 shrink-0">
                     <div class="h-full transition-all duration-1000 ease-linear" :class="timerColor" :style="{ width: timerWidth + '%' }"></div>
                 </div>
 
@@ -1160,6 +1165,12 @@
                         });
                         const timerWidth = computed(() => (turnTimeLeft.value / TURN_TIME) * 100);
                         const timerColor = computed(() => (timerWidth.value < 20 ? "bg-tred animate-pulse" : timerWidth.value < 40 ? "bg-yellow" : "bg-green"));
+                        const showTurnBanner = computed(() => phase.value === "playing" && !isCurrentPlayerAI.value);
+                        const showTimerBar = computed(() => {
+                            if (phase.value !== "playing") return false;
+                            if (isCurrentPlayerAI.value) return false;
+                            return isSoloMode.value ? true : isMyTurn.value;
+                        });
 
                         const textColorClass = (color) => {
                             const map = { red: "text-tred", blue: "text-tblue", yellow: "text-tyellow", black: "text-tblack" };
@@ -1600,6 +1611,7 @@
                             turnTimerObj = setInterval(() => {
                                 if (isSoloMode.value && !isPageActive.value) return;
                                 if (isCurrentPlayerAI.value) return;
+                                if (!isHost.value && !isSoloMode.value && !isMyTurn.value) return;
                                 turnTimeLeft.value--;
                                 if (turnTimeLeft.value <= 0 && isHost.value) {
                                     const ct = engine.currentTurn;
@@ -1616,6 +1628,11 @@
                             }, 1000);
                         };
                         const resetTurnTimer = () => (turnTimeLeft.value = TURN_TIME);
+
+                        watch(currentTurn, (newTurn, oldTurn) => {
+                            if (newTurn === oldTurn) return;
+                            if (!isHost.value && !isSoloMode.value && newTurn === myIndex.value) resetTurnTimer();
+                        });
 
                         const doAction = (pi, data) => {
                             if (data.action === "meld") processMeld(pi, data.tileIndices, data.targetSetIndex);
@@ -2117,6 +2134,8 @@
                             displayedHand,
                             timerWidth,
                             timerColor,
+                            showTurnBanner,
+                            showTimerBar,
                             selectedHandTiles,
                             selectedTableTiles,
                             selectedTableSet,
