@@ -427,8 +427,8 @@
                         class="flex justify-center items-center font-bold text-xs shrink-0"
                         :class="isMyTurn ? 'bg-green/15 border-green text-green' : 'bg-orange/10 border-orange text-orange'"
                     >
-                        <span v-if="isMyTurn" class="animate-pulse mr-1 text-lg">🫵</span>
-                        <span>{{ isMyTurn ? '換你出牌了！' : '等待對手出牌' }}</span>
+                        <span class="animate-pulse mr-1 text-lg">{{ isMyTurn ? '🫵' : '🍵' }}</span>
+                        <span class="py-1">{{ isMyTurn ? '換你出牌了！' : '等待對手出牌' }}</span>
                     </div>
                 </transition>
 
