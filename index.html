@@ -1,1170 +1,1990 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>拉密變臉版 Rummikub Twist - 可愛線上桌遊</title>
-<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<style>
-:root{--bg-warm:#FFF0E1;--bg-peach:#FFDCC5;--bg-cream:#FFF8F0;--accent-orange:#FF9B5E;--accent-yellow:#FFD166;--accent-green:#7ECE8A;--accent-pink:#FFB5C2;--accent-blue:#89C4E1;--text-dark:#5C4033;--text-light:#A0826D;--card-shadow:0 4px 12px rgba(92,64,51,.15);--tile-red:#E8564A;--tile-blue:#4A8FE8;--tile-yellow:#E8B84A;--tile-black:#3A3A3A;--tile-joker:#C44AE8}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans TC','Nunito',sans-serif;background:linear-gradient(145deg,var(--bg-warm),var(--bg-peach) 50%,var(--bg-cream));min-height:100vh;color:var(--text-dark);overflow-x:hidden}
-#lobby{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;animation:fadeIn .6s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-@keyframes tilePlace{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
-.logo-title{font-size:3.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent-orange),var(--accent-pink),var(--accent-yellow));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:5px;letter-spacing:2px}
-.logo-sub{font-size:1.1rem;color:var(--text-light);margin-bottom:30px;font-weight:600}
-.lobby-card{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-radius:24px;padding:30px;width:100%;max-width:440px;box-shadow:var(--card-shadow);border:2px solid rgba(255,155,94,.2)}
-.lobby-card h2{font-size:1.3rem;margin-bottom:18px;text-align:center;color:var(--accent-orange)}
-.avatar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
-.avatar-btn{width:100%;aspect-ratio:1;border-radius:16px;border:3px solid transparent;background:var(--bg-cream);cursor:pointer;font-size:2.2rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.avatar-btn:hover{transform:scale(1.1);border-color:var(--accent-orange)}
-.avatar-btn.selected{border-color:var(--accent-orange);background:var(--bg-peach);transform:scale(1.1);box-shadow:0 0 15px rgba(255,155,94,.4)}
-.input-group{margin-bottom:14px}
-.input-group label{display:block;font-size:.85rem;font-weight:700;color:var(--text-light);margin-bottom:5px}
-.input-group input,.input-group select{width:100%;padding:12px 16px;border:2px solid rgba(255,155,94,.3);border-radius:14px;font-size:1rem;font-family:inherit;background:var(--bg-cream);color:var(--text-dark);outline:none;transition:border-color .2s;-webkit-appearance:none}
-.input-group input:focus,.input-group select:focus{border-color:var(--accent-orange)}
-.btn-primary{width:100%;padding:14px;border:none;border-radius:16px;font-size:1.1rem;font-weight:800;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,var(--accent-orange),#FF7B3E);color:#fff;box-shadow:0 4px 15px rgba(255,123,62,.4);transition:all .2s;margin-top:8px}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,123,62,.5)}
-.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.btn-secondary{width:100%;padding:14px;border:2px solid var(--accent-orange);border-radius:16px;font-size:1.1rem;font-weight:800;font-family:inherit;cursor:pointer;background:transparent;color:var(--accent-orange);transition:all .2s;margin-top:8px}
-.btn-secondary:hover{background:rgba(255,155,94,.1)}
-.tab-row{display:flex;gap:8px;margin-bottom:20px}
-.tab-btn{flex:1;padding:10px;border:2px solid rgba(255,155,94,.3);border-radius:14px;background:transparent;font-family:inherit;font-weight:700;font-size:.85rem;color:var(--text-light);cursor:pointer;transition:all .2s}
-.tab-btn.active{background:var(--accent-orange);color:#fff;border-color:var(--accent-orange)}
-.room-code-display{text-align:center;padding:15px;background:var(--bg-cream);border-radius:16px;margin:15px 0;border:2px dashed var(--accent-orange)}
-.room-code-display .code{font-size:2.5rem;font-weight:900;color:var(--accent-orange);letter-spacing:8px;font-family:'Nunito',sans-serif}
-.room-code-display .hint{font-size:.8rem;color:var(--text-light);margin-top:4px}
-.player-list{margin:15px 0}
-.player-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-cream);border-radius:12px;margin-bottom:6px;animation:slideUp .3s ease}
-.player-item .avatar{font-size:1.5rem}.player-item .name{font-weight:700;flex:1}
-.player-item .host-badge,.player-item .ai-badge{font-size:.7rem;padding:2px 8px;border-radius:8px;font-weight:700}
-.player-item .host-badge{background:var(--accent-yellow);color:var(--text-dark)}
-.player-item .ai-badge{background:var(--accent-blue);color:#fff}
-.status-msg{text-align:center;font-size:.85rem;color:var(--text-light);margin-top:10px;min-height:20px}
-#gameBoard{display:none;flex-direction:column;height:100vh;width:100vw;overflow:hidden}
-.game-header{display:flex;align-items:center;justify-content:space-between;padding:8px 15px;background:rgba(255,255,255,.8);backdrop-filter:blur(10px);border-bottom:2px solid rgba(255,155,94,.15);z-index:10;flex-shrink:0}
-.game-header .turn-info{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem}
-.game-header .turn-avatar{font-size:1.5rem}
-.game-header .pool-count{background:var(--accent-yellow);padding:4px 12px;border-radius:10px;font-weight:800;font-size:.85rem}
-.opponents-bar{display:flex;gap:8px;padding:8px 15px;background:rgba(255,248,240,.6);border-bottom:1px solid rgba(255,155,94,.1);overflow-x:auto;flex-shrink:0}
-.opponent-card{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,.7);border-radius:12px;font-size:.8rem;font-weight:600;white-space:nowrap;border:2px solid transparent;transition:all .3s}
-.opponent-card.active-turn{border-color:var(--accent-orange);background:rgba(255,155,94,.15);animation:pulse 1.5s infinite}
-.opponent-card .opp-avatar{font-size:1.2rem}
-.opponent-card .tile-count{background:var(--accent-pink);color:#fff;padding:1px 7px;border-radius:8px;font-size:.75rem;font-weight:800}
-.table-area{flex:1;overflow:auto;padding:10px;background:repeating-conic-gradient(rgba(255,155,94,.03) 0% 25%,transparent 0% 50%) 50%/30px 30px;min-height:0}
-.table-sets{display:flex;flex-wrap:wrap;gap:12px;padding:5px;min-height:80px}
-.table-set{display:flex;gap:3px;padding:6px 8px;background:rgba(255,255,255,.65);border-radius:12px;border:2px solid rgba(255,155,94,.15);align-items:center;animation:tilePlace .3s ease;cursor:pointer;transition:border-color .2s}
-.table-set:hover{border-color:var(--accent-orange)}
-.table-set.selected-set{border-color:var(--accent-green);outline:3px solid var(--accent-green);outline-offset:-1px}
-.table-set.invalid{border-color:#E8564A;background:rgba(232,86,74,.1)}
-.empty-table-msg{display:flex;align-items:center;justify-content:center;width:100%;min-height:80px;color:var(--text-light);font-size:.9rem;font-weight:600;opacity:.6}
-.tile{width:38px;height:52px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:1.15rem;font-family:'Nunito',sans-serif;background:#fff;border:2px solid rgba(92,64,51,.12);box-shadow:0 2px 6px rgba(92,64,51,.1);cursor:pointer;user-select:none;transition:transform .15s,box-shadow .15s;position:relative;flex-shrink:0}
-.tile:hover{transform:translateY(-3px);box-shadow:0 5px 12px rgba(92,64,51,.2)}
-.tile.selected{transform:translateY(-6px);box-shadow:0 8px 20px rgba(126,206,138,.4);border-color:var(--accent-green)}
-.tile .tile-num{line-height:1}.tile .tile-dots{font-size:.35rem;letter-spacing:1px;margin-top:2px}
-.tile[data-color="red"] .tile-num{color:var(--tile-red)}
-.tile[data-color="blue"] .tile-num{color:var(--tile-blue)}
-.tile[data-color="yellow"] .tile-num{color:var(--tile-yellow)}
-.tile[data-color="black"] .tile-num{color:var(--tile-black)}
-.tile[data-color="joker"]{background:#fff;border-color:rgba(232,86,74,.3)}
-.tile[data-color="joker"] .joker-svg{width:28px;height:28px}
-.tile[data-color="joker"] .tile-label{font-size:.45rem;color:var(--tile-red);font-weight:800;margin-top:1px}
-.tile[data-color="double"]{background:#fff;border-color:rgba(74,143,232,.3)}
-.tile[data-color="double"] .joker-svg{width:28px;height:28px}
-.tile[data-color="double"] .tile-label{font-size:.45rem;color:var(--tile-blue);font-weight:800;margin-top:1px}
-.tile[data-color="colorchange"]{background:linear-gradient(to right,#fff 50%,#2a2a2a 50%);border-color:rgba(60,60,60,.3)}
-.tile[data-color="colorchange"] .joker-svg{width:28px;height:28px}
-.tile[data-color="colorchange"] .tile-label{font-size:.45rem;color:#555;font-weight:800;margin-top:1px}
-.tile[data-color="mirror"]{background:#fff;border-color:rgba(230,170,40,.3)}
-.tile[data-color="mirror"] .joker-svg{width:28px;height:28px}
-.tile[data-color="mirror"] .tile-label{font-size:.45rem;color:#D4940A;font-weight:800;margin-top:1px}
-.tile.table-tile-selected{border-color:var(--accent-green);box-shadow:0 0 12px rgba(126,206,138,.5);transform:translateY(-4px)}
-.hand-area{background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-top:2px solid rgba(255,155,94,.2);padding:8px 10px;flex-shrink:0}
-.hand-controls{display:flex;gap:4px;margin-bottom:8px;align-items:center;justify-content:space-between}
-.btn-group{display:flex;gap:4px;align-items:center}
-.ctrl-btn{padding:6px 12px;border:2px solid rgba(255,155,94,.3);border-radius:12px;background:var(--bg-cream);font-family:inherit;font-weight:700;font-size:.78rem;cursor:pointer;transition:all .2s;color:var(--text-dark)}
-.ctrl-btn:hover{background:var(--accent-orange);color:#fff;border-color:var(--accent-orange)}
-.ctrl-btn.danger{border-color:rgba(232,86,74,.3)}.ctrl-btn.danger:hover{background:var(--tile-red);border-color:var(--tile-red)}
-.ctrl-btn:disabled{opacity:.4;cursor:not-allowed}
-.ctrl-btn.sort-btn{background:rgba(137,196,225,.15);border-color:rgba(137,196,225,.4);color:var(--accent-blue)}
-.ctrl-btn.sort-btn:hover{background:var(--accent-blue);color:#fff;border-color:var(--accent-blue)}
-.ctrl-btn.main-btn{font-size:.85rem;padding:6px 18px;min-width:90px;text-align:center}
-.ctrl-btn.main-btn.draw-mode{background:linear-gradient(135deg,var(--accent-yellow),#f0b840);color:var(--text-dark);border-color:var(--accent-yellow)}
-.ctrl-btn.main-btn.draw-mode:hover{box-shadow:0 3px 12px rgba(255,209,102,.5);transform:translateY(-1px)}
-.ctrl-btn.main-btn.end-mode{background:linear-gradient(135deg,var(--accent-green),#5ebb6e);color:#fff;border-color:var(--accent-green)}
-.ctrl-btn.main-btn.end-mode:hover{box-shadow:0 3px 12px rgba(126,206,138,.4);transform:translateY(-1px)}
-.ctrl-btn.main-btn:disabled{opacity:.4;transform:none;box-shadow:none}
-.sort-bar{display:flex;justify-content:center;gap:8px;padding:4px 0 2px}
-.tile.borrowed{border-color:var(--accent-blue);box-shadow:0 0 8px rgba(137,196,225,.5)}
-.tile.borrowed::after{content:'↩';position:absolute;top:-2px;right:-2px;font-size:.5rem;background:var(--accent-blue);color:#fff;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;line-height:1}
-.tile.just-drawn{animation:drawnPulse 2s ease-out forwards;border-color:var(--accent-green);box-shadow:0 0 12px rgba(126,206,138,.6)}
-@keyframes drawnPulse{0%{box-shadow:0 0 16px rgba(126,206,138,.8);border-color:var(--accent-green)}70%{box-shadow:0 0 8px rgba(126,206,138,.4);border-color:var(--accent-green)}100%{box-shadow:0 2px 6px rgba(92,64,51,.1);border-color:rgba(92,64,51,.12)}}
-.hand-tiles{display:flex;gap:4px;overflow-x:auto;padding:5px 2px;min-height:62px;align-items:center;-webkit-overflow-scrolling:touch}
-.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(92,64,51,.9);color:#fff;padding:10px 24px;border-radius:14px;font-weight:700;font-size:.9rem;z-index:999;opacity:0;transition:all .3s;pointer-events:none;text-align:center;max-width:90vw}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.winner-overlay{display:none;position:fixed;inset:0;background:rgba(255,240,225,.95);z-index:100;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn .5s ease}
-.winner-overlay.show{display:flex}
-.winner-box{text-align:center;animation:slideUp .5s ease;max-width:360px;width:90%}
-.winner-emoji{font-size:5rem;animation:bounce 1s infinite}
-.winner-name{font-size:2rem;font-weight:900;color:var(--accent-orange);margin:10px 0}
-.winner-msg{font-size:1.1rem;color:var(--text-light);margin-bottom:20px}
-.scores-table{background:#fff;border-radius:16px;padding:15px 20px;margin:15px 0;box-shadow:var(--card-shadow)}
-.score-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,155,94,.1)}
-.score-row:last-child{border:none}.score-row .sr-avatar{font-size:1.3rem}.score-row .sr-name{flex:1;font-weight:700}.score-row .sr-pts{font-weight:800}
-.sr-pts.positive{color:var(--accent-green)}.sr-pts.negative{color:var(--tile-red)}
-.timer-bar{height:6px;background:var(--accent-green);border-radius:3px;transition:width 1s linear;margin:0}
-.timer-bar.warning{background:var(--accent-yellow)}.timer-bar.danger{background:var(--tile-red);animation:timerPulse .5s infinite}
-@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.6}}
-.turn-banner{display:none;align-items:center;justify-content:center;padding:8px 15px;background:linear-gradient(135deg,rgba(126,206,138,.12),rgba(126,206,138,.06));border-top:2px solid rgba(126,206,138,.25);font-weight:800;font-size:.9rem;color:var(--accent-green);gap:8px;animation:turnBannerIn .4s ease;flex-shrink:0}
-.turn-banner.show{display:flex}
-.turn-banner .turn-pulse{display:inline-block;animation:turnPulseAnim 1.2s infinite}
-@keyframes turnBannerIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes turnPulseAnim{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-.tile.last-played{box-shadow:0 0 10px rgba(255,155,94,.6);border-color:var(--accent-orange)}
-.tile.my-played{box-shadow:0 0 10px rgba(126,206,138,.6);border-color:var(--accent-green)}
-.tile.my-played::before{content:'✦';position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:.5rem;color:var(--accent-green)}
-.ai-thinking{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.92);backdrop-filter:blur(8px);padding:18px 32px;border-radius:18px;box-shadow:var(--card-shadow);font-weight:700;color:var(--accent-orange);z-index:50;display:none;align-items:center;gap:10px}
-.ai-thinking.show{display:flex}
-.ai-thinking .dots{display:inline-flex;gap:4px}
-.ai-thinking .dots span{width:8px;height:8px;border-radius:50%;background:var(--accent-orange);animation:dotBounce 1.2s infinite}
-.ai-thinking .dots span:nth-child(2){animation-delay:.2s}
-.ai-thinking .dots span:nth-child(3){animation-delay:.4s}
-@keyframes dotBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
-.rules-hint{background:rgba(255,255,255,.85);border-radius:10px;padding:4px 10px;font-size:.75rem;color:var(--text-light);cursor:pointer;font-weight:600;border:1px solid rgba(255,155,94,.2);white-space:nowrap;transition:all .2s}
-.rules-hint:hover{background:#fff}
-.rules-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:20px}
-.rules-modal.show{display:flex}
-.rules-content{background:#fff;border-radius:20px;padding:25px;max-width:540px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.2)}
-.rules-content h3{color:var(--accent-orange);margin:12px 0 6px;font-size:1rem}
-.rules-content h3:first-child{margin-top:0}
-.rules-content p{font-size:.85rem;line-height:1.6;color:var(--text-dark);margin-bottom:8px}
-.rules-content .close-rules{margin-top:15px}
-.tile-inventory{margin:10px 0}
-.tile-inv-section{margin-bottom:12px}
-.tile-inv-label{font-size:.8rem;font-weight:700;color:var(--text-light);margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.tile-inv-label .inv-count{background:var(--accent-yellow);color:var(--text-dark);padding:1px 8px;border-radius:8px;font-size:.7rem}
-.tile-inv-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px}
-.mini-tile{width:26px;height:34px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;font-family:'Nunito',sans-serif;background:#fff;border:1.5px solid rgba(92,64,51,.12);box-shadow:0 1px 3px rgba(92,64,51,.08)}
-.mini-tile .mt-num{line-height:1}
-.mini-tile[data-c="red"] .mt-num{color:var(--tile-red)}
-.mini-tile[data-c="blue"] .mt-num{color:var(--tile-blue)}
-.mini-tile[data-c="yellow"] .mt-num{color:var(--tile-yellow)}
-.mini-tile[data-c="black"] .mt-num{color:var(--tile-black)}
-.mini-tile.mt-joker{border-color:rgba(232,86,74,.3)}
-.mini-tile.mt-joker .mt-num{color:var(--tile-red);font-size:.55rem}
-.mini-tile.mt-double{border-color:rgba(74,143,232,.3)}
-.mini-tile.mt-double .mt-num{color:var(--tile-blue);font-size:.55rem}
-.mini-tile.mt-cc{border-color:rgba(60,60,60,.3);background:linear-gradient(to right,#fff 50%,#2a2a2a 50%)}
-.mini-tile.mt-cc .mt-num{color:#555;font-size:.55rem}
-.mini-tile.mt-mirror{border-color:rgba(230,170,40,.3)}
-.mini-tile.mt-mirror .mt-num{color:#D4940A;font-size:.55rem}
-.tile-inv-total{text-align:center;font-weight:800;font-size:.95rem;color:var(--accent-orange);padding:8px;background:var(--bg-cream);border-radius:12px;margin-top:8px}
-@media(max-width:500px){.logo-title{font-size:2.5rem}.lobby-card{padding:20px}.tile{width:34px;height:46px;font-size:1rem}.avatar-btn{font-size:1.8rem}.room-code-display .code{font-size:2rem}.tab-btn{font-size:.75rem;padding:8px 4px}.ctrl-btn{padding:5px 8px;font-size:.72rem}}
-.loading-dots::after{content:'';animation:dots 1.5s steps(4) infinite}
-@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
-</style>
-</head>
-<body>
-<div id="toast" class="toast"></div>
-<div class="ai-thinking" id="aiThinking"><span>AI 思考中</span><span class="dots"><span></span><span></span><span></span></span></div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        <title>拉密變臉版 Rummikub Twist - 低面數風</title>
+        <!-- Vue 3 (鎖定版本，避免浮動版號) -->
+        <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- MQTT -->
+        <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+        <!-- Fonts -->
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet" />
 
-<div id="lobby">
-  <div class="logo-title">拉密變臉版</div>
-  <div class="logo-sub">Rummikub Twist · 單人 / 2-4 人即時對戰</div>
-  <div class="lobby-card" id="setupCard">
-    <h2>選擇你的角色</h2>
-    <div class="avatar-grid" id="avatarGrid"></div>
-    <div class="input-group"><label>暱稱</label><input type="text" id="nicknameInput" placeholder="輸入你的暱稱" maxlength="10"></div>
-    <div class="tab-row">
-      <button class="tab-btn active" data-mode="solo" onclick="setMode('solo')">🤖 單人</button>
-      <button class="tab-btn" data-mode="host" onclick="setMode('host')">建立房間</button>
-      <button class="tab-btn" data-mode="join" onclick="setMode('join')">加入房間</button>
-    </div>
-    <div id="soloOptions">
-      <div class="input-group"><label>AI 對手數量</label><select id="aiCountSelect"><option value="1">1 位</option><option value="2" selected>2 位</option><option value="3">3 位</option></select></div>
-      <div class="input-group"><label>AI 難度</label><select id="aiDiffSelect"><option value="easy">簡單 🌱</option><option value="normal" selected>普通 🌿</option><option value="hard">困難 🔥</option></select></div>
-    </div>
-    <div id="joinField" style="display:none" class="input-group"><label>房間號碼 (4 位數)</label><input type="text" id="roomCodeInput" placeholder="1234" maxlength="4" inputmode="numeric"></div>
-    <button class="btn-primary" id="goBtn" onclick="handleGo()">開始單人遊戲</button>
-    <div class="status-msg" id="statusMsg"></div>
-  </div>
-  <div class="lobby-card" id="waitingCard" style="display:none">
-    <h2 id="waitingTitle">等待玩家加入</h2>
-    <div class="room-code-display" id="roomCodeDisplay" style="display:none"><div class="hint">分享此號碼給朋友</div><div class="code" id="displayCode"></div></div>
-    <div class="player-list" id="playerList"></div>
-    <button class="btn-primary" id="startBtn" style="display:none" onclick="startGame()">開始遊戲</button>
-    <button class="btn-secondary" onclick="leaveRoom()">離開房間</button>
-    <div class="status-msg" id="waitingStatus">連線中<span class="loading-dots"></span></div>
-  </div>
-</div>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: { sans: ['"Noto Sans TC"', "Nunito", "sans-serif"] },
+                        colors: {
+                            warm: "#FFF0E1",
+                            peach: "#FFDCC5",
+                            cream: "#FFF8F0",
+                            orange: "#FF9B5E",
+                            yellow: "#FFD166",
+                            green: "#7ECE8A",
+                            pink: "#FFB5C2",
+                            blue: "#89C4E1",
+                            dark: "#5C4033",
+                            light: "#A0826D",
+                            tred: "#E8564A",
+                            tblue: "#4A8FE8",
+                            tyellow: "#E8B84A",
+                            tblack: "#3A3A3A",
+                        },
+                    },
+                },
+            };
+        </script>
+        <style>
+            body {
+                /* 低面數幾何風格背景 */
+                background:
+                    linear-gradient(135deg, rgba(255, 220, 197, 0.4) 25%, transparent 25%) -50px 0,
+                    linear-gradient(225deg, rgba(255, 220, 197, 0.4) 25%, transparent 25%) -50px 0,
+                    linear-gradient(315deg, rgba(255, 220, 197, 0.4) 25%, transparent 25%),
+                    linear-gradient(45deg, rgba(255, 220, 197, 0.4) 25%, transparent 25%);
+                background-size: 100px 100px;
+                background-color: #fff0e1;
+                overflow-x: hidden;
+            }
 
-<div id="gameBoard">
-  <div class="game-header">
-    <div class="turn-info"><span class="turn-avatar" id="turnAvatar"></span><span id="turnName"></span><span>的回合</span></div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="rules-hint" onclick="toggleRules()">📖 規則</div>
-      <div class="pool-count" id="poolCount">牌堆: 112</div>
-    </div>
-  </div>
-  <div class="opponents-bar" id="opponentsBar"></div>
-  <div class="table-area" id="tableArea">
-    <div class="table-sets" id="tableSets"><div class="empty-table-msg">桌面上還沒有牌組，出牌開始遊戲吧！</div></div>
-  </div>
-  <div class="turn-banner" id="turnBanner"><span class="turn-pulse">🎯</span><span>換你出牌了！</span></div>
-  <div class="timer-bar" id="timerBar" style="width:100%"></div>
-  <div class="hand-area">
-    <div class="hand-controls">
-      <div class="btn-group"><button class="ctrl-btn" onclick="playSelected()">出牌</button><button class="ctrl-btn" onclick="addToExistingSet()">加入牌組</button><button class="ctrl-btn" onclick="splitFromSet()">取牌</button><button class="ctrl-btn" onclick="replaceJoker()">換鬼牌</button></div>
-      <div class="btn-group"><button class="ctrl-btn danger" onclick="undoTurn()">撤銷</button><button class="ctrl-btn main-btn draw-mode" id="mainBtn" onclick="mainBtnClick()">摸牌</button></div>
-    </div>
-    <div class="hand-tiles" id="handTiles"></div>
-    <div class="sort-bar"><button class="ctrl-btn sort-btn" id="sortColorBtn" onclick="sortHand('color')">按色排序</button><button class="ctrl-btn sort-btn" id="sortNumBtn" onclick="sortHand('number')">按數排序</button></div>
-  </div>
-</div>
+            /* Low-Poly 立體光影效果 */
+            .poly-shadow {
+                box-shadow: 6px 6px 0px rgba(92, 64, 51, 0.15);
+            }
+            .poly-shadow-sm {
+                box-shadow: 3px 3px 0px rgba(92, 64, 51, 0.15);
+            }
+            .poly-btn {
+                transition: all 0.1s;
+            }
+            .poly-btn:active:not(:disabled) {
+                transform: translate(4px, 4px);
+                border-bottom-width: 0px !important;
+                border-right-width: 0px !important;
+            }
 
-<div class="winner-overlay" id="winnerOverlay"><div class="winner-box">
-  <div class="winner-emoji" id="winnerEmoji"></div><div class="winner-name" id="winnerName"></div>
-  <div class="winner-msg" id="winnerMsg">恭喜獲勝！</div><div class="scores-table" id="scoresTable"></div>
-  <button class="btn-primary" style="max-width:300px;margin:0 auto" onclick="location.reload()">回到大廳</button>
-</div></div>
+            /* 牌塊樣式 */
+            .poly-tile {
+                transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 3px 3px 0px rgba(92, 64, 51, 0.12);
+            }
+            .poly-tile:hover {
+                transform: translate(-2px, -2px);
+                box-shadow: 5px 5px 0px rgba(92, 64, 51, 0.2);
+            }
+            .tile-selected {
+                border-color: #7ece8a !important;
+                box-shadow: 5px 5px 0px rgba(126, 206, 138, 0.6) !important;
+                transform: translate(-3px, -3px);
+            }
+            .tile-table-selected {
+                border-color: #7ece8a !important;
+                box-shadow: 2px 2px 0px rgba(126, 206, 138, 0.6) !important;
+            }
+            .table-set-selected {
+                outline: 3px solid #7ece8a;
+                outline-offset: 1px;
+                background-color: rgba(126, 206, 138, 0.15);
+            }
 
-<div class="rules-modal" id="rulesModal" onclick="if(event.target===this)toggleRules()">
-  <div class="rules-content">
-    <h3>🎯 遊戲目標</h3><p>最先將手牌全部出完的玩家獲勝。</p>
+            @keyframes drawnPulse {
+                0% {
+                    box-shadow: 0 0 16px rgba(126, 206, 138, 0.8);
+                    border-color: #7ece8a;
+                }
+                70% {
+                    box-shadow: 0 0 8px rgba(126, 206, 138, 0.4);
+                    border-color: #7ece8a;
+                }
+                100% {
+                    box-shadow: 3px 3px 0px rgba(92, 64, 51, 0.12);
+                    border-color: #e2e8f0;
+                }
+            }
+            .tile-just-drawn {
+                animation: drawnPulse 2s ease-out forwards;
+            }
 
-    <h3>🃏 全部牌組一覽（共 112 張）</h3>
-    <div class="tile-inventory">
-      <div class="tile-inv-section">
-        <div class="tile-inv-label"><span style="color:var(--tile-red)">● 紅色</span> <span class="inv-count">× 26 張</span> <span style="font-size:.7rem;color:var(--text-light)">1-13 各兩張</span></div>
-        <div class="tile-inv-row" id="invRed"></div>
-      </div>
-      <div class="tile-inv-section">
-        <div class="tile-inv-label"><span style="color:var(--tile-blue)">● 藍色</span> <span class="inv-count">× 26 張</span></div>
-        <div class="tile-inv-row" id="invBlue"></div>
-      </div>
-      <div class="tile-inv-section">
-        <div class="tile-inv-label"><span style="color:var(--tile-yellow)">● 黃色</span> <span class="inv-count">× 26 張</span></div>
-        <div class="tile-inv-row" id="invYellow"></div>
-      </div>
-      <div class="tile-inv-section">
-        <div class="tile-inv-label"><span style="color:var(--tile-black)">● 黑色</span> <span class="inv-count">× 26 張</span></div>
-        <div class="tile-inv-row" id="invBlack"></div>
-      </div>
-      <div class="tile-inv-section">
-        <div class="tile-inv-label">🌀 鬼牌 <span class="inv-count">× 8 張</span></div>
-        <div class="tile-inv-row">
-          <div class="mini-tile mt-joker"><span class="mt-num">百搭</span></div>
-          <div class="mini-tile mt-joker"><span class="mt-num">百搭</span></div>
-          <div class="mini-tile mt-double"><span class="mt-num">雙人</span></div>
-          <div class="mini-tile mt-double"><span class="mt-num">雙人</span></div>
-          <div class="mini-tile mt-cc"><span class="mt-num">變色</span></div>
-          <div class="mini-tile mt-cc"><span class="mt-num">變色</span></div>
-          <div class="mini-tile mt-mirror"><span class="mt-num">鏡射</span></div>
-          <div class="mini-tile mt-mirror"><span class="mt-num">鏡射</span></div>
+            /* 隱藏卷軸 */
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+
+            /* 手牌區：手機隱藏捲軸，桌機顯示細捲軸 */
+            .hand-area {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+                user-select: none;
+                -webkit-user-select: none;
+                cursor: grab;
+            }
+            .hand-area::-webkit-scrollbar {
+                display: none;
+            }
+            @media (min-width: 768px) {
+                .hand-area {
+                    scrollbar-width: thin;
+                    scrollbar-color: #f0a830 transparent;
+                }
+                .hand-area::-webkit-scrollbar {
+                    display: block;
+                    height: 4px;
+                }
+                .hand-area::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .hand-area::-webkit-scrollbar-thumb {
+                    background: #f0a830;
+                    border-radius: 2px;
+                }
+            }
+
+            /* Vue 過渡動畫 */
+            .fade-enter-active,
+            .fade-leave-active {
+                transition: opacity 0.3s ease;
+            }
+            .fade-enter-from,
+            .fade-leave-to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        </style>
+    </head>
+    <body class="text-dark antialiased min-h-screen relative flex items-center justify-center">
+        <div id="app" class="w-full h-full min-h-screen">
+            <!-- 全域提示框 (Toast) -->
+            <transition name="fade">
+                <div v-if="toastMsg" class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-dark text-white px-6 py-3 rounded-lg font-bold z-[999] poly-shadow whitespace-nowrap">
+                    {{ toastMsg }}
+                </div>
+            </transition>
+
+            <!-- AI 思考中指示器 -->
+            <transition name="fade">
+                <div
+                    v-if="aiThinking"
+                    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 backdrop-blur-md px-8 py-5 rounded-xl border-2 border-orange border-b-4 border-r-4 poly-shadow font-bold text-orange z-[100] flex items-center gap-3"
+                >
+                    <span>AI 思考中</span>
+                    <div class="flex gap-1">
+                        <span class="w-2.5 h-2.5 rounded bg-orange animate-bounce"></span>
+                        <span class="w-2.5 h-2.5 rounded bg-orange animate-bounce" style="animation-delay: 0.2s"></span>
+                        <span class="w-2.5 h-2.5 rounded bg-orange animate-bounce" style="animation-delay: 0.4s"></span>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- 遊戲大廳 (Lobby) -->
+            <div v-if="phase === 'lobby' || phase === 'waiting'" class="flex flex-col items-center justify-center min-h-screen p-4 w-full">
+                <div class="text-center mb-6">
+                    <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-orange via-pink to-yellow tracking-wider mb-2">拉密變臉版</h1>
+                    <p class="text-light font-bold">Rummikub Twist · 立體低面數風</p>
+                </div>
+
+                <div class="bg-white/90 backdrop-blur-md rounded-xl p-6 md:p-8 w-full max-w-[440px] border-2 border-orange/20 border-b-8 border-r-8 poly-shadow relative">
+                    <template v-if="phase === 'lobby'">
+                        <h2 class="text-xl font-bold text-orange text-center mb-4">選擇你的角色</h2>
+
+                        <div class="grid grid-cols-4 gap-3 mb-5">
+                            <button
+                                v-for="(avatar, i) in avatars"
+                                :key="i"
+                                @click="selectedAvatar = i"
+                                class="aspect-square bg-cream border-2 border-orange/20 border-b-4 border-r-4 rounded-lg flex items-center justify-center text-3xl md:text-4xl poly-btn"
+                                :class="{ 'border-orange bg-peach translate-x-1 translate-y-1 !border-b-2 !border-r-2 shadow-inner': selectedAvatar === i }"
+                            >
+                                {{ avatar }}
+                            </button>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-light mb-1">暱稱</label>
+                            <input
+                                v-model="nickname"
+                                type="text"
+                                placeholder="輸入你的暱稱"
+                                maxlength="10"
+                                class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 focus:border-orange outline-none font-bold text-dark transition-colors"
+                            />
+                        </div>
+
+                        <div class="flex gap-2 mb-4">
+                            <button
+                                v-for="m in ['solo', 'host', 'join']"
+                                :key="m"
+                                @click="mode = m"
+                                class="flex-1 py-2 border-2 border-orange/30 rounded border-b-4 border-r-4 font-bold text-sm poly-btn transition-colors"
+                                :class="mode === m ? 'bg-orange text-white border-orange translate-x-[2px] translate-y-[2px] !border-b-2 !border-r-2' : 'bg-transparent text-light hover:bg-orange/10'"
+                            >
+                                {{ m === 'solo' ? '🤖 單人' : m === 'host' ? '建立房間' : '加入房間' }}
+                            </button>
+                        </div>
+
+                        <div v-if="mode === 'solo'" class="space-y-4 mb-5">
+                            <div>
+                                <label class="block text-sm font-bold text-light mb-1">AI 對手數量</label>
+                                <select v-model.number="aiCount" class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 outline-none font-bold">
+                                    <option :value="1">1 位</option>
+                                    <option :value="2">2 位</option>
+                                    <option :value="3">3 位</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-light mb-1">AI 難度</label>
+                                <select v-model="aiDiff" class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 outline-none font-bold">
+                                    <option value="easy">簡單 🌱</option>
+                                    <option value="normal">普通 🌿</option>
+                                    <option value="hard">困難 🔥</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div v-if="mode === 'join'" class="mb-5">
+                            <label class="block text-sm font-bold text-light mb-1">房間號碼 (4 位數)</label>
+                            <input
+                                v-model="roomCodeInput"
+                                type="text"
+                                placeholder="1234"
+                                maxlength="4"
+                                inputmode="numeric"
+                                class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 outline-none font-bold text-center text-xl tracking-widest"
+                            />
+                        </div>
+
+                        <button
+                            @click="handleGo"
+                            :disabled="isConnecting"
+                            class="w-full py-3 bg-gradient-to-r from-orange to-[#FF7B3E] text-white font-black text-lg rounded-lg border-b-4 border-r-4 border-[#cc6231] poly-btn active:border-b-0 active:border-r-0 disabled:opacity-50"
+                        >
+                            {{ isConnecting ? '連線中...' : (mode === 'solo' ? '開始單人遊戲' : mode === 'host' ? '建立房間' : '加入房間') }}
+                        </button>
+                    </template>
+
+                    <template v-else-if="phase === 'waiting'">
+                        <h2 class="text-xl font-bold text-orange text-center mb-4">{{ isHost ? '等待玩家加入' : `已加入房間 ${roomCode}` }}</h2>
+
+                        <div v-if="isHost" class="bg-cream border-2 border-dashed border-orange rounded-xl p-4 text-center mb-4">
+                            <div class="text-sm text-light font-bold">分享此號碼給朋友</div>
+                            <div class="text-4xl font-black text-orange tracking-[0.2em] mt-1">{{ roomCode }}</div>
+                        </div>
+
+                        <div class="space-y-2 mb-6">
+                            <div v-for="(p, i) in players" :key="p.id" class="flex items-center gap-3 bg-cream p-2.5 rounded-lg border-2 border-transparent">
+                                <span class="text-2xl">{{ avatars[p.avatar] }}</span>
+                                <span class="font-bold flex-1">{{ p.name }}</span>
+                                <span v-if="i===0" class="bg-yellow text-dark text-xs px-2 py-1 rounded font-bold">房主</span>
+                                <span v-if="p.isAI" class="bg-blue text-white text-xs px-2 py-1 rounded font-bold">AI</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <button
+                                v-if="isHost"
+                                @click="startGame"
+                                :disabled="players.length < 2"
+                                class="w-full py-3 bg-green text-white font-black text-lg rounded-lg border-b-4 border-r-4 border-[#5ca366] poly-btn disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                開始遊戲 ({{ players.length }}/4)
+                            </button>
+                            <button @click="leaveRoom" class="w-full py-3 bg-transparent text-orange border-2 border-orange rounded-lg font-bold border-b-4 border-r-4 poly-btn">離開房間</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 遊戲主要畫布 -->
+            <div v-if="phase === 'playing'" class="flex flex-col h-screen w-full relative overflow-hidden bg-cream">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-2 md:p-3 bg-white/90 backdrop-blur-sm border-b-2 border-orange/10 shrink-0 shadow-sm z-10">
+                    <div class="flex items-center gap-2 font-bold text-sm md:text-base" :class="isMyTurn ? 'text-orange' : 'text-dark'">
+                        <span class="text-xl md:text-2xl">{{ avatars[currentPlayerInfo.avatar] }}</span>
+                        <span>{{ currentPlayerInfo.name }}{{ currentPlayerInfo.isAI ? ' 🤖' : '' }} 的回合</span>
+                    </div>
+                    <div class="flex items-center gap-2 md:gap-3">
+                        <button
+                            @click="showRules = true"
+                            class="px-2 py-1 bg-white border-2 border-orange/20 rounded font-bold text-xs text-light hover:bg-orange/5 poly-btn border-b-[3px] border-r-[3px]"
+                        >
+                            📖 規則
+                        </button>
+                        <button
+                            @click="headerAction"
+                            class="px-2 py-1 bg-white border-2 rounded font-bold text-xs poly-btn border-b-[3px] border-r-[3px]"
+                            :class="(!isSoloMode && !isHost) ? 'border-tred/30 text-tred hover:bg-tred/5' : 'border-green/30 text-green hover:bg-green/5'"
+                        >
+                            {{ (!isSoloMode && !isHost) ? '🚪 離開' : '🔄 新局' }}
+                        </button>
+                        <div class="bg-yellow px-3 py-1 rounded font-black text-xs md:text-sm border-2 border-yellow border-b-[3px] border-r-[3px] poly-shadow-sm">牌堆: {{ poolCount }}</div>
+                    </div>
+                </div>
+
+                <!-- 對手資訊列 -->
+                <div class="flex gap-2 p-2 bg-orange/5 border-b border-orange/10 overflow-x-auto shrink-0 no-scrollbar">
+                    <div
+                        v-for="(p, i) in opponents"
+                        :key="p.id"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 rounded-lg border-2 font-bold text-xs whitespace-nowrap transition-colors"
+                        :class="p.isCurrentTurn ? 'border-orange bg-orange/10 shadow-sm' : 'border-transparent'"
+                    >
+                        <span class="text-base md:text-lg">{{ avatars[p.avatar] }}</span>
+                        <span>{{ p.name }}{{ p.isAI ? ' 🤖' : '' }}</span>
+                        <span class="bg-pink text-white px-2 py-0.5 rounded ml-1 border-b-2 border-pink/80">{{ p.handCount }} 張</span>
+                    </div>
+                </div>
+
+                <!-- 桌面區域 (Table Area) -->
+                <div class="flex-1 overflow-auto p-3 md:p-4" @click="selectedTableSet = -1">
+                    <div class="flex flex-wrap gap-4 items-start min-h-[100px]">
+                        <div
+                            v-for="(set, si) in table"
+                            :key="'set'+si"
+                            @click.stop="selectedTableSet = si"
+                            class="flex gap-1 p-2 bg-white/60 rounded-xl border-2 transition-all cursor-pointer"
+                            :class="{ 'table-set-selected': selectedTableSet === si, 'border-orange/20': selectedTableSet !== si, 'bg-tred/10 border-tred/50': !valSet(set) }"
+                        >
+                            <div
+                                v-for="(tile, ti) in set"
+                                :key="tile.id"
+                                @click.stop="selectTableTile(si, ti)"
+                                class="w-[34px] h-[46px] md:w-10 md:h-14 bg-white border-2 border-gray-200 border-b-4 border-r-4 rounded flex flex-col items-center justify-center font-black cursor-pointer relative poly-tile"
+                                :class="tableTileClasses(tile, si, ti)"
+                            >
+                                <!-- 牌面內容渲染 -->
+                                <template v-if="tile.color === 'joker'"
+                                    ><div v-html="JOKER_SVGS.joker" class="w-6 h-6 md:w-7 md:h-7"></div>
+                                    <span class="text-[8px] md:text-[10px] text-tred mt-0.5">百搭</span></template
+                                >
+                                <template v-else-if="tile.color === 'double'"
+                                    ><div v-html="JOKER_SVGS.double" class="w-6 h-6 md:w-7 md:h-7"></div>
+                                    <span class="text-[8px] md:text-[10px] text-tblue mt-0.5">雙人</span></template
+                                >
+                                <template v-else-if="tile.color === 'colorchange'"
+                                    ><div v-html="JOKER_SVGS.colorchange" class="w-6 h-6 md:w-7 md:h-7"></div>
+                                    <span class="text-[8px] md:text-[10px] text-gray-600 mt-0.5">變色</span></template
+                                >
+                                <template v-else-if="tile.color === 'mirror'"
+                                    ><div v-html="JOKER_SVGS.mirror" class="w-6 h-6 md:w-7 md:h-7"></div>
+                                    <span class="text-[8px] md:text-[10px] text-yellow-600 mt-0.5">鏡射</span></template
+                                >
+                                <template v-else>
+                                    <span :class="textColorClass(tile.color)" class="text-base md:text-xl leading-none mt-1">{{tile.number}}</span>
+                                    <span :class="textColorClass(tile.color)" class="text-[4px] md:text-[4px] tracking-[1px] md:tracking-[2px] mt-0.5 md:mt-1"
+                                        >{{ '●'.repeat(Math.min(tile.number,4)) }}</span
+                                    >
+                                </template>
+                                <!-- 標記圖示 -->
+                                <span v-if="myPlayedTileIds.includes(tile.id)" class="absolute -top-1 md:-top-2 left-1/2 transform -translate-x-1/2 text-[8px] md:text-xs text-green drop-shadow-sm"
+                                    >✦</span
+                                >
+                            </div>
+                        </div>
+
+                        <div v-if="!table.length" class="w-full flex items-center justify-center h-24 text-light font-bold opacity-60">桌面上還沒有牌組，出牌開始遊戲吧！</div>
+                    </div>
+                </div>
+
+                <!-- 輪到你提示橫幅 -->
+                <transition name="fade">
+                    <div v-if="isMyTurn && !isCurrentPlayerAI" class="flex justify-center items-center py-2 bg-green/15 border-t-2 border-green text-green font-bold text-sm shrink-0">
+                        <span class="animate-pulse mr-2 text-lg">🎯</span> 換你出牌了！
+                    </div>
+                </transition>
+
+                <!-- 計時器條 -->
+                <div class="h-1.5 w-full bg-gray-200 shrink-0">
+                    <div class="h-full transition-all duration-1000 ease-linear" :class="timerColor" :style="{ width: timerWidth + '%' }"></div>
+                </div>
+
+                <!-- 操作區與手牌 -->
+                <div class="bg-white/95 backdrop-blur-md border-t-4 border-orange/20 p-2 md:p-3 shrink-0 flex flex-col gap-2 z-20">
+                    <!-- 控制按鈕列 -->
+                    <div class="flex justify-between items-center gap-2 overflow-x-auto no-scrollbar">
+                        <div class="flex gap-1.5 md:gap-2 whitespace-nowrap">
+                            <button
+                                @click="playSelected"
+                                class="px-2 py-1.5 bg-cream border-2 border-orange/30 border-b-4 border-r-4 rounded font-bold text-xs hover:bg-orange hover:border-orange hover:text-white poly-btn disabled:opacity-50 text-dark"
+                                :disabled="!isMyTurn"
+                            >
+                                出牌
+                            </button>
+                            <button
+                                @click="addToExistingSet"
+                                class="px-2 py-1.5 bg-cream border-2 border-orange/30 border-b-4 border-r-4 rounded font-bold text-xs hover:bg-orange hover:border-orange hover:text-white poly-btn disabled:opacity-50 text-dark"
+                                :disabled="!isMyTurn"
+                            >
+                                加入
+                            </button>
+                            <button
+                                @click="splitFromSet"
+                                class="px-2 py-1.5 bg-cream border-2 border-orange/30 border-b-4 border-r-4 rounded font-bold text-xs hover:bg-orange hover:border-orange hover:text-white poly-btn disabled:opacity-50 text-dark"
+                                :disabled="!isMyTurn"
+                            >
+                                取牌
+                            </button>
+                            <button
+                                @click="replaceJoker"
+                                class="px-2 py-1.5 bg-cream border-2 border-orange/30 border-b-4 border-r-4 rounded font-bold text-xs hover:bg-orange hover:border-orange hover:text-white poly-btn disabled:opacity-50 text-dark"
+                                :disabled="!isMyTurn"
+                            >
+                                換鬼牌
+                            </button>
+                        </div>
+                        <div class="flex gap-1.5 md:gap-2 whitespace-nowrap">
+                            <button
+                                @click="undoTurn"
+                                class="px-3 py-1.5 bg-cream border-2 border-tred/30 border-b-4 border-r-4 rounded font-bold text-xs hover:bg-tred hover:border-tred hover:text-white text-tred poly-btn disabled:opacity-50"
+                                :disabled="!isMyTurn"
+                            >
+                                撤銷
+                            </button>
+                            <button
+                                @click="mainBtnClick"
+                                :disabled="!isMyTurn"
+                                :class="hasMeldedThisTurn ? 'bg-green border-green text-white hover:bg-[#5ebb6e]' : 'bg-gradient-to-br from-yellow to-[#f0b840] border-[#d9a536] text-dark'"
+                                class="px-4 md:px-6 py-1.5 border-2 border-b-4 border-r-4 rounded font-black text-sm poly-btn disabled:opacity-50 disabled:transform-none"
+                            >
+                                {{ hasMeldedThisTurn ? '結束回合 ✓' : '摸牌' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 手牌顯示區 -->
+                    <div
+                        class="flex gap-1.5 md:gap-2 overflow-x-auto py-2 px-1 min-h-[70px] md:min-h-[85px] md:pb-3 items-center hand-area"
+                        ref="handContainer"
+                        @wheel.prevent="wheelHand"
+                        @mousedown="handMouseDown"
+                        @mousemove="handMouseMove"
+                        @mouseup="handMouseUp"
+                        @mouseleave="handMouseUp"
+                    >
+                        <div
+                            v-for="(tile, i) in displayedHand"
+                            :key="tile.id"
+                            @click="toggleSelectHandTile(i)"
+                            class="w-[34px] h-[48px] md:w-[42px] md:h-[58px] bg-white border-2 border-gray-200 border-b-4 border-r-4 rounded flex flex-col items-center justify-center font-black cursor-pointer relative shrink-0 poly-tile"
+                            :class="{
+                            'tile-selected': selectedHandTiles.includes(i),
+                            'border-blue shadow-[0_0_8px_rgba(137,196,225,0.8)]': borrowedTileIds.includes(tile.id),
+                            'tile-just-drawn': lastDrawnTileId === tile.id
+                         }"
+                        >
+                            <!-- 手牌內容渲染 -->
+                            <template v-if="tile.color === 'joker'"
+                                ><div v-html="JOKER_SVGS.joker" class="w-6 h-6 md:w-8 md:h-8"></div>
+                                <span class="text-[8px] md:text-[10px] text-tred mt-0.5">百搭</span></template
+                            >
+                            <template v-else-if="tile.color === 'double'"
+                                ><div v-html="JOKER_SVGS.double" class="w-6 h-6 md:w-8 md:h-8"></div>
+                                <span class="text-[8px] md:text-[10px] text-tblue mt-0.5">雙人</span></template
+                            >
+                            <template v-else-if="tile.color === 'colorchange'"
+                                ><div v-html="JOKER_SVGS.colorchange" class="w-6 h-6 md:w-8 md:h-8"></div>
+                                <span class="text-[8px] md:text-[10px] text-gray-600 mt-0.5">變色</span></template
+                            >
+                            <template v-else-if="tile.color === 'mirror'"
+                                ><div v-html="JOKER_SVGS.mirror" class="w-6 h-6 md:w-8 md:h-8"></div>
+                                <span class="text-[8px] md:text-[10px] text-yellow-600 mt-0.5">鏡射</span></template
+                            >
+                            <template v-else>
+                                <span :class="textColorClass(tile.color)" class="text-xl md:text-2xl leading-none mt-1">{{tile.number}}</span>
+                                <span :class="textColorClass(tile.color)" class="text-[4px] md:text-[4px] tracking-[1px] md:tracking-[2px] mt-0.5 md:mt-1"
+                                    >{{ '●'.repeat(Math.min(tile.number,4)) }}</span
+                                >
+                            </template>
+
+                            <!-- 借用標記 -->
+                            <span
+                                v-if="borrowedTileIds.includes(tile.id)"
+                                class="absolute -top-1.5 -right-1.5 bg-blue text-white w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold border-2 border-white poly-shadow-sm"
+                                >↩</span
+                            >
+                        </div>
+                    </div>
+
+                    <!-- 排序按鈕 -->
+                    <div class="flex justify-center gap-3 mb-2">
+                        <button
+                            @click="sortHand('color')"
+                            class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded-lg font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
+                        >
+                            顏色排序
+                        </button>
+                        <button
+                            @click="sortHand('number')"
+                            class="px-3 py-1 bg-blue/10 border-2 border-blue/40 border-b-[3px] border-r-[3px] rounded-lg font-bold text-xs text-blue hover:bg-blue hover:text-white poly-btn"
+                        >
+                            數字排序
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 勝利結算 Overlay -->
+            <transition name="fade">
+                <div v-if="phase === 'finished' && gameOverData" class="fixed inset-0 bg-warm/95 z-50 flex flex-col items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-sm border-2 border-orange/20 border-b-8 border-r-8 poly-shadow text-center">
+                        <div class="text-6xl md:text-7xl mb-2 animate-bounce">{{ avatars[gameOverData.winnerAvatar] }}</div>
+                        <div class="text-2xl font-black text-orange mb-1">{{ gameOverData.winnerName }} 獲勝！</div>
+                        <div class="text-sm font-bold text-light mb-5">{{ gameOverData.isPoolExhaust ? '牌堆已用盡，手牌最少者獲勝！' : '恭喜出完所有手牌！' }}</div>
+
+                        <div class="bg-cream rounded-xl p-4 mb-6 border-2 border-orange/10 border-b-[3px] border-r-[3px]">
+                            <div class="font-black text-dark mb-3 border-b border-orange/10 pb-2">計分板</div>
+                            <div v-for="s in gameOverData.scores" :key="s.name" class="flex items-center gap-3 py-1.5 border-b border-orange/5 last:border-0">
+                                <span class="text-xl">{{ avatars[s.avatar] }}</span>
+                                <span class="font-bold flex-1 text-left">{{ s.name }}</span>
+                                <span class="font-black" :class="s.points >= 0 ? 'text-green' : 'text-tred'">{{ s.points > 0 ? '+' : '' }}{{ s.points }} 點</span>
+                            </div>
+                        </div>
+
+                        <button
+                            v-if="isSoloMode || isHost"
+                            @click="restartGame"
+                            class="w-full py-3 bg-gradient-to-r from-orange to-[#FF7B3E] text-white font-black rounded-lg border-b-4 border-r-4 border-[#cc6231] poly-btn mb-3"
+                        >
+                            🔄 開新局
+                        </button>
+                        <button v-else class="w-full py-3 bg-gray-200 text-gray-500 font-black rounded-lg border-b-4 border-r-4 border-gray-300 mb-3 cursor-not-allowed">等待房主開新局...</button>
+
+                        <button @click="leaveRoom" class="w-full py-3 bg-transparent text-orange border-2 border-orange rounded-lg font-bold border-b-4 border-r-4 poly-btn">回到大廳</button>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- 規則 Modal -->
+            <transition name="fade">
+                <div v-if="showRules" @click.self="showRules = false" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto border-2 border-orange/20 border-b-8 border-r-8 poly-shadow no-scrollbar">
+                        <div class="flex justify-between items-center mb-5 border-b-2 border-orange/20 pb-3 sticky top-0 bg-white z-10">
+                            <h3 class="text-2xl font-black text-orange tracking-wider">📖 遊戲規則</h3>
+                            <button @click="showRules = false" class="text-gray-400 hover:text-dark text-3xl font-black transition-colors">&times;</button>
+                        </div>
+
+                        <div class="space-y-6 text-sm md:text-base font-bold text-dark leading-relaxed">
+                            <!-- 基礎規則 -->
+                            <div class="bg-cream p-4 rounded-xl border-2 border-orange/20 border-b-4 border-r-4">
+                                <p class="mb-2"><span class="text-orange text-lg">🎯</span> <b>獲勝目標</b>：最先將手牌全部出完的玩家獲勝。</p>
+                                <p class="mb-2"><span class="text-blue text-lg">🧊</span> <b>破冰行動</b>：首次出牌點數總和必須 <b>≥ 30 點</b>，且只能使用自己的手牌，不能接續桌面上的牌組。</p>
+                                <p><span class="text-green text-lg">🔄</span> <b>桌面重組</b>：破冰後，可隨意拆分、重組桌面上任何牌組。若回合結束時桌面有無效牌組，將會還原並<b>罰抽 3 張牌</b>。</p>
+                            </div>
+
+                            <!-- 牌組組合說明 -->
+                            <div>
+                                <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">📋</span> 合法牌組組合</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- 群組 -->
+                                    <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
+                                        <div class="font-black text-lg mb-1">群組 (Group)</div>
+                                        <p class="text-light text-sm mb-2">3 到 4 張<b>數字相同</b>但<b>顏色不同</b>的牌。</p>
+                                        <div class="bg-gray-100 p-2 rounded text-xs">
+                                            <span class="text-green font-black">✅ 合法：</span><span class="text-tred">紅7</span> + <span class="text-tblue">藍7</span> +
+                                            <span class="text-tblack">黑7</span>
+                                        </div>
+                                    </div>
+                                    <!-- 順組 -->
+                                    <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
+                                        <div class="font-black text-lg mb-1">順組 (Run)</div>
+                                        <p class="text-light text-sm mb-2">3 張以上<b>顏色相同</b>且<b>數字連續</b>的牌。</p>
+                                        <div class="bg-gray-100 p-2 rounded text-xs">
+                                            <span class="text-green font-black">✅ 合法：</span><span class="text-tblue">藍5</span> + <span class="text-tblue">藍6</span> +
+                                            <span class="text-tblue">藍7</span> + <span class="text-tblue">藍8</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 變臉版特殊鬼牌 -->
+                            <div>
+                                <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">🌀</span> 變臉版特殊鬼牌</h4>
+                                <p class="text-light mb-4">注意：所有鬼牌若在遊戲結束時留於手中，皆會<b>罰扣 30 點</b>。特殊鬼牌(藍/黑/黃)無法被手牌替換取回。</p>
+
+                                <div class="space-y-4">
+                                    <!-- 普通百搭 -->
+                                    <div class="bg-red-50 p-4 rounded-xl border-2 border-red-200 border-b-4 border-r-4">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.joker"></div>
+                                            <h5 class="text-lg font-black text-tred">🔴 普通百搭 (紅) × 2</h5>
+                                        </div>
+                                        <ul class="list-disc pl-5 space-y-1 text-sm">
+                                            <li>可替代任何數字與顏色的牌。</li>
+                                            <li><b>唯一可替換：</b>輪到你時，可用相對應的手牌將其替換取回。</li>
+                                            <li>取回的百搭牌必須在<b>同一回合</b>搭配至少 2 張手牌一起出掉，不能收回手牌中。</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- 雙人百搭 -->
+                                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200 border-b-4 border-r-4">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.double"></div>
+                                            <h5 class="text-lg font-black text-tblue">🔵 雙人百搭 (藍) × 2</h5>
+                                        </div>
+                                        <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
+                                            <li><b>順組中：</b>代表 2 個同色<u class="underline-offset-2">連續</u>數字。</li>
+                                            <li><b>群組中：</b>代表 2 個不同顏色的同數字牌。</li>
+                                            <li><span class="text-tred">限制：</span>不能跳號填補缺口；不可放在 12 之後或 2 之前。破冰算 2 張牌的點數。</li>
+                                        </ul>
+                                        <div class="bg-white/70 p-2 rounded text-xs space-y-1">
+                                            <p><span class="text-green font-black">✅ 合法：</span>黑5 + 黑6 + [雙人] + 黑9 (雙人代表黑7與黑8)</p>
+                                            <p><span class="text-tred font-black">❌ 錯誤：</span>黑12 + [雙人] (超出數字13範圍)</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- 變色百搭 -->
+                                    <div class="bg-gray-100 p-4 rounded-xl border-2 border-gray-300 border-b-4 border-r-4">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.colorchange"></div>
+                                            <h5 class="text-lg font-black text-tblack">⬛ 變色百搭 (黑白) × 2</h5>
+                                        </div>
+                                        <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
+                                            <li><b>只能用於順組！</b></li>
+                                            <li>將順組強制分為兩段<u class="underline-offset-2">不同顏色</u>，百搭本身佔據一個數字位置。</li>
+                                            <li><span class="text-tred">限制：</span>百搭前後的顏色必須不同。不可用於群組。</li>
+                                        </ul>
+                                        <div class="bg-white/70 p-2 rounded text-xs space-y-1">
+                                            <p><span class="text-green font-black">✅ 合法：</span>紅3 + 紅4 + [變色] + 藍6 + 藍7 (變色佔據數字5)</p>
+                                            <p><span class="text-tred font-black">❌ 錯誤：</span>紅3 + 紅4 + [變色] + 紅6 (前後顏色未改變)</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- 鏡射百搭 -->
+                                    <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-300 border-b-4 border-r-4">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.mirror"></div>
+                                            <h5 class="text-lg font-black text-yellow-600">🟡 鏡射百搭 (黃) × 2</h5>
+                                        </div>
+                                        <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
+                                            <li>必須放在牌組的<u class="underline-offset-2">正中間</u>。</li>
+                                            <li><b>順組中：</b>左右數字必須對稱鏡像 (例如遞增再遞減)。</li>
+                                            <li><b>群組中：</b>左右顏色必須對稱鏡像。</li>
+                                            <li><span class="text-tred">限制：</span>破冰時點數算作 0 分。</li>
+                                        </ul>
+                                        <div class="bg-white/70 p-2 rounded text-xs space-y-1">
+                                            <p><span class="text-green font-black">✅ 合法順組：</span>紅3 + 紅4 + [鏡射] + 紅4 + 紅3</p>
+                                            <p><span class="text-green font-black">✅ 合法群組：</span>黑7 + 藍7 + [鏡射] + 藍7 + 黑7</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            @click="showRules = false"
+                            class="w-full mt-6 py-4 bg-gradient-to-r from-orange to-[#FF7B3E] text-white text-lg font-black rounded-xl border-b-4 border-r-4 border-[#cc6231] poly-btn hover:shadow-lg sticky bottom-0"
+                        >
+                            我準備好開始了！
+                        </button>
+                    </div>
+                </div>
+            </transition>
         </div>
-      </div>
-      <div class="tile-inv-total">數字牌 104 張 ＋ 鬼牌 8 張 ＝ 共 112 張</div>
-    </div>
-
-    <h3>🧊 破冰規則</h3><p>首次出牌點數總和必須 ≥ 30 點，只能使用手牌，不能使用桌面上的牌。</p>
-    <h3>📋 出牌方式</h3>
-    <p><b>群組</b>：3-4 張同數字、不同顏色的牌（如：紅7 藍7 黑7）</p>
-    <p><b>順組</b>：3 張以上同色、連續數字的牌（如：紅5 紅6 紅7 紅8）</p>
-    <h3>🔄 桌面重組</h3><p>破冰後可拆分、重組桌面上任何牌組，只要回合結束時所有牌組都合法即可。從桌面取回的牌會標記藍色 ↩，結束前必須放回。</p>
-
-    <h3>🔴 紅色百搭 × 2</h3>
-    <p>可替代任何一張牌。可用對應的手牌替換桌面上的百搭，取回後必須在同一回合搭配 2 張手牌出掉。手中罰分 30 點。</p>
-
-    <h3>🔵 藍色雙人百搭 × 2</h3>
-    <p><b>順組</b>：代表 2 個同色連續數字。例如 黑5 黑6 黑7 黑8 黑9 <b>雙人</b> 黑12 → 雙人代表黑10+黑11。</p>
-    <p><b>群組</b>：代表 2 個不同顏色的同數字牌。</p>
-    <p>⚠️ 代表的 2 個數字必須相鄰，不能跳號。不可放在 12 之後或 2 之前。破冰算兩張牌點數。罰分 30 點。</p>
-
-    <h3>⬛ 黑白變色百搭 × 2</h3>
-    <p><b>只能用於順組</b>。將順組分為前後兩段不同顏色，自身佔一個數字位置。</p>
-    <p>例：紅3 紅4 <b>變色</b> 藍6 藍7 → 變色佔位置 5。前後顏色必須不同。罰分 30 點。</p>
-
-    <h3>🟡 黃色鏡射百搭 × 2</h3>
-    <p>放在牌組正中間，左右必須完全對稱鏡像。</p>
-    <p>順組例：紅3 紅4 紅5 <b>鏡射</b> 紅5 紅4 紅3</p>
-    <p>群組例：紅7 藍7 <b>鏡射</b> 藍7 紅7</p>
-    <p>點數值 0（破冰不算分），但手中罰分 30 點。</p>
-
-    <p style="margin-top:10px"><i>⚠️ 特殊鬼牌不能替代普通百搭或其他特殊鬼牌，也不能被手牌替換取回。</i></p>
-
-    <h3>⏱ 時間與懲罰</h3>
-    <p>每回合 2 分鐘。超時自動撤銷並摸 1 張。桌面有無效牌組時，還原操作並罰抽 3 張。</p>
-    <h3>🏁 結束與計分</h3>
-    <p>勝者得所有敗者手牌點數總和（正分），敗者各得自己手牌點數（負分）。所有鬼牌罰分 30 點。牌堆用盡且無人出完時，手牌點數最低者勝。</p>
-    <button class="btn-primary close-rules" onclick="toggleRules()">關閉</button>
-  </div>
-</div>
-
-<script>
-const AVATARS=['🐱','🐶','🐰','🐻','🦊','🐼','🐨','🦁'],COLORS=['red','blue','yellow','black'],AI_NAMES=['小花','阿呆','球球','豆豆','奶茶','糰子','麻糬'];
-let mode='solo',selectedAvatar=0,myId='',myNickname='',roomCode='',isHost=false,isSoloMode=false,aiDifficulty='normal';
-let gameMode='twist'; // Always Twist edition
-let mqttClient=null; // MQTT WebSocket client
-let gameState=null,myPlayerIndex=-1,selectedTiles=new Set(),selectedTableTiles=[],turnBackup=null,hasMeldedThisTurn=false;
-let turnTimer=null,turnTimeLeft=120,currentViewState=null,selectedTableSet=-1;
-let borrowedTileIds=new Set(),lastPlayedTileIds=new Set(),lastPlayedTimeout=null,lastDrawnTileId=null;
-let myPlayedTileIds=new Set(); // tiles I placed on table this turn (for green highlight)
-let turnBackupSnapshot=new Set(); // table tile IDs at start of my turn (for non-host tracking)
-const TURN_TIME=120;
-
-// ===== MQTT NETWORKING =====
-const MQTT_BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
-let currentBrokerIdx=0;
-
-function mqttTopic(){return 'rummikub-game/'+roomCode}
-function mqttTopicDM(targetId){return 'rummikub-game/'+roomCode+'/dm/'+targetId}
-
-function connectMQTT(){
-  return new Promise((resolve,reject)=>{
-    myId='player-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    const url=MQTT_BROKERS[currentBrokerIdx];
-    const client=mqtt.connect(url,{
-      clientId:'rmk-'+myId,
-      clean:true,
-      connectTimeout:8000,
-      keepalive:30,
-      reconnectPeriod:3000
-    });
-    client.on('connect',()=>{
-      // Subscribe to room broadcast + my DM channel
-      client.subscribe([mqttTopic(),mqttTopicDM(myId)],{qos:0},err=>{
-        if(err)reject(err); else resolve(client);
-      });
-    });
-    client.on('error',e=>{
-      console.error('MQTT error:',e);
-      // Try next broker
-      if(currentBrokerIdx<MQTT_BROKERS.length-1){
-        currentBrokerIdx++;client.end(true);
-        connectMQTT().then(resolve).catch(reject);
-      } else reject(e);
-    });
-    client.on('message',(topic,msg)=>{
-      try{
-        const data=JSON.parse(msg.toString());
-        if(data._from===myId) return; // Ignore own messages
-        handleMQTTMessage(topic,data);
-      }catch(e){}
-    });
-    mqttClient=client;
-  });
-}
-
-function mqttSend(data){
-  if(!mqttClient||!mqttClient.connected) return;
-  mqttClient.publish(mqttTopic(),JSON.stringify({...data,_from:myId}),{qos:0});
-}
-
-function mqttSendDM(targetId,data){
-  if(!mqttClient||!mqttClient.connected) return;
-  mqttClient.publish(mqttTopicDM(targetId),JSON.stringify({...data,_from:myId}),{qos:0});
-}
-
-function handleMQTTMessage(topic,data){
-  if(isHost){
-    // Host receives join requests and game actions
-    if(data.type==='join') handleJoinRequest(data);
-    else if(data.type==='gameAction') handleRemoteAction(data);
-    else if(data.type==='ping') handlePing(data);
-  } else {
-    // Client receives state updates
-    if(data.type==='lobbyUpdate') renderPLData(data.players);
-    else if(data.type==='gameState'&&data.targetId===myId) renderGame(data.state);
-    else if(data.type==='toast'&&data.targetId===myId) showToast(data.msg);
-    else if(data.type==='gameStart'&&data.targetId===myId){myPlayerIndex=data.myIndex;document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';}
-    else if(data.type==='gameOver') showWinner(data);
-    else if(data.type==='pong'&&data.targetId===myId){/* connection alive */}
-  }
-}
-
-function handleJoinRequest(data){
-  if(gameState.phase!=='lobby'){mqttSendDM(data.playerId,{type:'toast',msg:'遊戲已開始'});return}
-  if(gameState.players.length>=4){mqttSendDM(data.playerId,{type:'toast',msg:'房間已滿'});return}
-  if(gameState.players.some(p=>p.id===data.playerId)) return;
-  gameState.players.push({id:data.playerId,name:data.name,avatar:data.avatar,hand:[],hasBrokenIce:false,connected:true,isAI:false});
-  broadcastLobby();renderPL();
-}
-
-function handleRemoteAction(data){
-  const pi=gameState.players.findIndex(p=>p.id===data.playerId);
-  if(pi<0)return;
-  // Convert tileIds to tileIndices on host side
-  if(data.action==='meld'&&data.tileIds&&!data.tileIndices){
-    const hand=gameState.players[pi].hand;
-    const indices=data.tileIds.map(id=>hand.findIndex(t=>t.id===id)).filter(i=>i>=0);
-    if(indices.length!==data.tileIds.length)return; // safety check
-    data.tileIndices=indices;
-  }
-  if(data.action==='replaceJoker'&&data.tileId!==undefined&&data.handTileIndex===undefined){
-    const hand=gameState.players[pi].hand;
-    const idx=hand.findIndex(t=>t.id===data.tileId);
-    if(idx<0)return;
-    data.handTileIndex=idx;
-  }
-  doAction(pi,data);
-}
-
-function handlePing(data){
-  mqttSendDM(data.playerId,{type:'pong',targetId:data.playerId});
-}
-
-// ===== BROADCAST FUNCTIONS =====
-function broadcastLobby(){
-  const d={type:'lobbyUpdate',players:gameState.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,connected:p.connected,isAI:p.isAI})),roomCode};
-  mqttSend(d);renderPL();
-}
-
-function broadcastGS(){
-  gameState.players.forEach((p,i)=>{
-    if(p.isAI) return;
-    if(p.id===myId){renderGame(sanState(i));return}
-    // Send personalized state via DM
-    mqttSendDM(p.id,{type:'gameState',targetId:p.id,state:sanState(i)});
-  });
-}
-
-function sanState(pi){return{phase:gameState.phase,players:gameState.players.map((p,i)=>({id:p.id,name:p.name,avatar:p.avatar,handCount:p.hand.length,hasBrokenIce:p.hasBrokenIce,connected:p.connected,isAI:p.isAI,hand:i===pi?p.hand:undefined})),table:gameState.table,poolCount:gameState.pool.length,currentTurn:gameState.currentTurn,myIndex:pi}}
-
-function sendTP(pi,data){
-  if(gameState.players[pi].isAI)return;
-  const p=gameState.players[pi];
-  if(p.id===myId){if(data.type==='toast')showToast(data.msg);return}
-  mqttSendDM(p.id,{...data,targetId:p.id});
-}
-
-// ===== UI HELPERS =====
-function toggleRules(){document.getElementById('rulesModal').classList.toggle('show')}
-function initAvatars(){const g=document.getElementById('avatarGrid');AVATARS.forEach((a,i)=>{const b=document.createElement('button');b.className='avatar-btn'+(i===0?' selected':'');b.textContent=a;b.onclick=()=>{document.querySelectorAll('.avatar-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedAvatar=i};g.appendChild(b)})}
-function setMode(m){mode=m;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));document.getElementById('soloOptions').style.display=m==='solo'?'block':'none';document.getElementById('joinField').style.display=m==='join'?'block':'none';document.getElementById('goBtn').textContent=m==='solo'?'開始單人遊戲':m==='host'?'建立房間':'加入房間'}
-function showToast(msg,dur=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),dur)}
-function genCode(){return String(Math.floor(1000+Math.random()*9000))}
-
-// ===== MAIN ENTRY =====
-async function handleGo(){
-  myNickname=document.getElementById('nicknameInput').value.trim();
-  if(!myNickname){showToast('請輸入暱稱');return}
-  document.getElementById('goBtn').disabled=true;
-  if(mode==='solo'){startSoloGame();return}
-
-  document.getElementById('statusMsg').textContent='正在連線到伺服器...';
-  try{
-    if(mode==='host'){
-      roomCode=genCode();
-      await connectMQTT();
-      isHost=true;myPlayerIndex=0;
-      gameState={phase:'lobby',players:[{id:myId,name:myNickname,avatar:selectedAvatar,hand:[],hasBrokenIce:false,connected:true,isAI:false}],table:[],pool:[],currentTurn:0};
-      showWaitingRoom();
-    }else{
-      roomCode=document.getElementById('roomCodeInput').value.trim();
-      if(!/^\d{4}$/.test(roomCode)){showToast('請輸入 4 位數房間號碼');document.getElementById('goBtn').disabled=false;return}
-      await connectMQTT();
-      isHost=false;
-      // Send join request
-      mqttSend({type:'join',playerId:myId,name:myNickname,avatar:selectedAvatar});
-      showWaitingRoom();
-      // Retry join in case of timing
-      setTimeout(()=>mqttSend({type:'join',playerId:myId,name:myNickname,avatar:selectedAvatar}),2000);
-      // Ping to check host exists
-      mqttSend({type:'ping',playerId:myId});
-      setTimeout(()=>{
-        if(document.getElementById('waitingCard').style.display!=='none'&&!document.getElementById('playerList').children.length){
-          showToast('未收到房主回應，請確認房間號碼');
-        }
-      },6000);
-    }
-  }catch(e){showToast('連線失敗，請重試');document.getElementById('goBtn').disabled=false;console.error(e)}
-}
-
-function doAction(pi,data){
-  if(data.action==='meld')processMeld(pi,data.tileIndices,data.targetSetIndex);
-  else if(data.action==='draw')processDraw(pi);
-  else if(data.action==='endTurn')processEndTurn(pi);
-  else if(data.action==='undo')processUndo(pi);
-  else if(data.action==='splitTake')processSplitTake(pi,data.setIndex,data.tilePositions);
-  else if(data.action==='replaceJoker')processReplaceJoker(pi,data.handTileIndex,data.setIndex,data.jokerPos);
-}
-
-function showWaitingRoom(){
-  document.getElementById('setupCard').style.display='none';document.getElementById('waitingCard').style.display='block';
-  if(isHost){document.getElementById('roomCodeDisplay').style.display='block';document.getElementById('displayCode').textContent=roomCode;document.getElementById('startBtn').style.display='block';document.getElementById('waitingTitle').textContent='等待玩家加入';document.getElementById('waitingStatus').textContent='分享房間號碼給朋友';renderPL()}
-  else{document.getElementById('roomCodeDisplay').style.display='none';document.getElementById('startBtn').style.display='none';document.getElementById('waitingTitle').textContent='已加入房間 '+roomCode;document.getElementById('waitingStatus').textContent='等待房主開始遊戲'}
-}
-function renderPL(){if(!gameState)return;const l=document.getElementById('playerList');l.innerHTML='';gameState.players.forEach((p,i)=>{const d=document.createElement('div');d.className='player-item';d.innerHTML=`<span class="avatar">${AVATARS[p.avatar]}</span><span class="name">${p.name}</span>${i===0?'<span class="host-badge">房主</span>':''}${p.isAI?'<span class="ai-badge">AI</span>':''}`;l.appendChild(d)});const sb=document.getElementById('startBtn');if(sb){sb.disabled=gameState.players.length<2;sb.textContent=`開始遊戲 (${gameState.players.length}/4)`}}
-function renderPLData(players){const l=document.getElementById('playerList');l.innerHTML='';players.forEach((p,i)=>{const d=document.createElement('div');d.className='player-item';d.innerHTML=`<span class="avatar">${AVATARS[p.avatar]}</span><span class="name">${p.name}</span>${i===0?'<span class="host-badge">房主</span>':''}${p.isAI?'<span class="ai-badge">AI</span>':''}`;l.appendChild(d)})}
-function leaveRoom(){if(mqttClient)mqttClient.end();location.reload()}
-
-function createPool(){
-  const pool=[];let id=0;
-  for(let s=0;s<2;s++)for(const c of COLORS)for(let n=1;n<=13;n++)pool.push({id:id++,color:c,number:n});
-  // 2 regular jokers (red)
-  pool.push({id:id++,color:'joker',number:0});
-  pool.push({id:id++,color:'joker',number:0});
-  // 2 double jokers (blue)
-  pool.push({id:id++,color:'double',number:0});
-  pool.push({id:id++,color:'double',number:0});
-  // 2 color-change jokers (black/white)
-  pool.push({id:id++,color:'colorchange',number:0});
-  pool.push({id:id++,color:'colorchange',number:0});
-  // 2 mirror jokers (yellow)
-  pool.push({id:id++,color:'mirror',number:0});
-  pool.push({id:id++,color:'mirror',number:0});
-  return shuffle(pool);
-}
-function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]]}return r}
-function isJokerType(t){return t.color==='joker'||t.color==='double'||t.color==='colorchange'||t.color==='mirror'}
-function tileScore(t){if(t.color==='mirror')return 0;if(isJokerType(t))return 30;return t.number}
-function handScore(hand){return hand.reduce((s,t)=>s+tileScore(t),0)}
-
-// ===== SOLO =====
-function startSoloGame(){
-  isSoloMode=true;isHost=true;myPlayerIndex=0;myId='local';
-  const aiCount=parseInt(document.getElementById('aiCountSelect').value);aiDifficulty=document.getElementById('aiDiffSelect').value;
-  const usedAv=new Set([selectedAvatar]),usedNm=new Set();
-  gameState={phase:'playing',players:[{id:myId,name:myNickname,avatar:selectedAvatar,hand:[],hasBrokenIce:false,connected:true,isAI:false}],table:[],pool:createPool(),currentTurn:0};
-  for(let i=0;i<aiCount;i++){let av;do{av=Math.floor(Math.random()*8)}while(usedAv.has(av));usedAv.add(av);let nm;do{nm=AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)]}while(usedNm.has(nm));usedNm.add(nm);gameState.players.push({id:'ai-'+i,name:nm,avatar:av,hand:[],hasBrokenIce:false,connected:true,isAI:true})}
-  gameState.players.forEach(p=>{for(let i=0;i<14;i++)if(gameState.pool.length)p.hand.push(gameState.pool.pop())});
-  saveTurnBackup();document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';
-  broadcastGS();startTurnTimer();
-}
-
-function startGame(){
-  if(!isHost||gameState.players.length<2)return;
-  gameState.phase='playing';gameState.pool=createPool();gameState.table=[];gameState.currentTurn=0;
-  gameState.players.forEach(p=>{p.hand=[];p.hasBrokenIce=false;for(let i=0;i<14;i++)if(gameState.pool.length)p.hand.push(gameState.pool.pop())});
-  saveTurnBackup();
-  gameState.players.forEach((p,i)=>{if(p.id!==myId)mqttSendDM(p.id,{type:'gameStart',targetId:p.id,myIndex:i})});
-  myPlayerIndex=0;document.getElementById('lobby').style.display='none';document.getElementById('gameBoard').style.display='flex';
-  broadcastGS();startTurnTimer();
-}
-
-// ===== GAME LOGIC =====
-function saveTurnBackup(){turnBackup=JSON.parse(JSON.stringify({table:gameState.table,hands:gameState.players.map(p=>p.hand.map(t=>({...t})))}));hasMeldedThisTurn=false;myPlayedTileIds=new Set()}
-
-function processMeld(pi,indices,tsi){
-  if(gameState.currentTurn!==pi){sendTP(pi,{type:'toast',msg:'不是你的回合'});return}
-  const p=gameState.players[pi],tiles=indices.map(i=>p.hand[i]).filter(Boolean);if(!tiles.length)return;
-  if(tsi!==undefined&&tsi>=0&&tsi<gameState.table.length)gameState.table[tsi]=[...gameState.table[tsi],...tiles];
-  else gameState.table.push([...tiles]);
-  [...indices].sort((a,b)=>b-a).forEach(i=>p.hand.splice(i,1));
-  hasMeldedThisTurn=true;broadcastGS();if(p.hand.length===0)endGameWithWinner(pi);
-}
-
-function processSplitTake(pi,setIndex,tilePositions){
-  if(gameState.currentTurn!==pi)return;
-  if(!gameState.players[pi].hasBrokenIce){sendTP(pi,{type:'toast',msg:'破冰後才能操作桌面牌組'});return}
-  const set=gameState.table[setIndex];if(!set)return;
-  const taken=tilePositions.map(p=>set[p]).filter(Boolean);
-  const remaining=set.filter((_,i)=>!tilePositions.includes(i));
-  if(remaining.length>0)gameState.table[setIndex]=remaining;else gameState.table.splice(setIndex,1);
-  taken.forEach(t=>{if(gameState.players[pi].id===myId)borrowedTileIds.add(t.id)});
-  gameState.players[pi].hand.push(...taken);hasMeldedThisTurn=true;broadcastGS();
-}
-
-function processReplaceJoker(pi,handTileIdx,setIndex,jokerPos){
-  if(gameState.currentTurn!==pi)return;
-  if(!gameState.players[pi].hasBrokenIce){sendTP(pi,{type:'toast',msg:'破冰後才能替換鬼牌'});return}
-  const player=gameState.players[pi],set=gameState.table[setIndex];
-  if(!set||!set[jokerPos])return;
-  const target=set[jokerPos];
-  // Only regular jokers can be replaced by hand tiles; special jokers cannot be swapped
-  if(target.color!=='joker'){sendTP(pi,{type:'toast',msg:'特殊鬼牌不能被替換'});return}
-  const handTile=player.hand[handTileIdx];if(!handTile)return;
-  const jokerTile=target,testSet=[...set];testSet[jokerPos]=handTile;
-  if(!valSet(testSet)){sendTP(pi,{type:'toast',msg:'此牌無法替換該鬼牌'});return}
-  set[jokerPos]=handTile;player.hand.splice(handTileIdx,1);player.hand.push(jokerTile);
-  hasMeldedThisTurn=true;broadcastGS();
-  sendTP(pi,{type:'toast',msg:'已替換鬼牌！鬼牌必須在本回合搭配 2 張手牌出掉'});
-}
-
-function processDraw(pi){
-  if(gameState.currentTurn!==pi)return;
-  if(hasMeldedThisTurn){sendTP(pi,{type:'toast',msg:'已出牌，不能摸牌'});return}
-  if(!gameState.pool.length){checkPoolExhausted();return}
-  const drawn=gameState.pool.pop();if(gameState.players[pi].id===myId)lastDrawnTileId=drawn.id;
-  gameState.players[pi].hand.push(drawn);advanceTurn();broadcastGS();
-}
-
-function processEndTurn(pi){
-  if(gameState.currentTurn!==pi)return;
-  if(hasMeldedThisTurn){
-    if(borrowedTileIds.size>0&&gameState.players[pi].id===myId){
-      const handIds=new Set(gameState.players[pi].hand.map(t=>t.id));
-      const still=[...borrowedTileIds].filter(id=>handIds.has(id));
-      if(still.length>0){sendTP(pi,{type:'toast',msg:`還有 ${still.length} 張從桌面取回的牌未歸還`});return}
-    }
-    if(!gameState.players[pi].hasBrokenIce){
-      const oldIds=new Set();if(turnBackup)turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
-      const nt=[];gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))nt.push(t)}));
-      const sum=nt.reduce((s,t)=>s+(t.color==='joker'?0:t.number),0);
-      if(sum<30){sendTP(pi,{type:'toast',msg:`破冰需 ≥30 點（目前 ${sum} 點）`});return}
-      const bhi=new Set(turnBackup.hands[pi].map(t=>t.id));
-      for(const t of nt){if(!bhi.has(t.id)){sendTP(pi,{type:'toast',msg:'破冰時只能使用手牌'});return}}
-      gameState.players[pi].hasBrokenIce=true;
-    }
-    if(!valAll()){sendTP(pi,{type:'toast',msg:'桌面有無效牌組！還原並罰抽 3 張'});applyPenalty(pi);return}
-    autoSortTableSets();computeLastPlayedTiles();
-  } else {
-    if(gameState.pool.length>0){
-      const drawn=gameState.pool.pop();if(gameState.players[pi].id===myId)lastDrawnTileId=drawn.id;
-      gameState.players[pi].hand.push(drawn);sendTP(pi,{type:'toast',msg:'未出牌，自動摸一張牌'});
-    }
-    lastPlayedTileIds=new Set();
-  }
-  borrowedTileIds=new Set();advanceTurn();broadcastGS();
-}
-
-function applyPenalty(pi){
-  gameState.table=JSON.parse(JSON.stringify(turnBackup.table));
-  gameState.players.forEach((p,i)=>p.hand=turnBackup.hands[i].map(t=>({...t})));
-  for(let i=0;i<3;i++){if(gameState.pool.length)gameState.players[pi].hand.push(gameState.pool.pop())}
-  hasMeldedThisTurn=false;advanceTurn();broadcastGS();
-}
-
-function processUndo(pi){
-  if(gameState.currentTurn!==pi||!turnBackup)return;
-  gameState.table=JSON.parse(JSON.stringify(turnBackup.table));
-  gameState.players.forEach((p,i)=>p.hand=turnBackup.hands[i].map(t=>({...t})));
-  hasMeldedThisTurn=false;borrowedTileIds=new Set();broadcastGS();sendTP(pi,{type:'toast',msg:'已撤銷'});
-}
-
-function autoSortTableSets(){
-  gameState.table.forEach((set,i)=>{
-    // Don't reorder sets with mirror/colorchange jokers — position matters
-    if(set.some(t=>t.color==='mirror'||t.color==='colorchange')) return;
-    const checkRun=isRunTwist(set);
-    const checkGroup=isGroupTwist(set);
-    if(checkRun){
-      const nj=set.filter(t=>!isJokerType(t)).sort((a,b)=>a.number-b.number);
-      const jks=set.filter(t=>isJokerType(t));if(!nj.length)return;
-      let start=nj[0].number;const totalLen=nj.length+jks.reduce((s,t)=>s+(t.color==='double'?2:1),0);
-      const sorted=[];let ji=0;const used=[...nj];
-      for(let n=start;n<start+totalLen;n++){
-        const idx=used.findIndex(t=>t.number===n);
-        if(idx>=0){sorted.push(used[idx]);used.splice(idx,1)}
-        else if(ji<jks.length){sorted.push(jks[ji++]);if(jks[ji-1]&&jks[ji-1].color==='double')n++}
-      }
-      if(sorted.length===set.length)gameState.table[i]=sorted;
-    } else if(checkGroup){
-      set.sort((a,b)=>{if(isJokerType(a))return 1;if(isJokerType(b))return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
-    }
-  });
-}
-
-function computeLastPlayedTiles(){
-  const oldIds=new Set();if(turnBackup)turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
-  lastPlayedTileIds=new Set();gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))lastPlayedTileIds.add(t.id)}));
-  // No timeout — persists until next turn change clears it
-}
-
-function valAll(){return gameState.table.every(s=>valSet(s))}
-function valSet(set){if(set.length<3)return false;return isGroupTwist(set)||isRunTwist(set)}
-
-// === CLASSIC VALIDATION ===
-function isGroup(set){if(set.length>4)return false;const nj=set.filter(t=>!isJokerType(t));if(!nj.length)return set.length>=3&&set.length<=4;const n=nj[0].number,cs=new Set();for(const t of nj){if(t.number!==n)return false;if(cs.has(t.color))return false;cs.add(t.color)}return true}
-function isRun(set){const nj=set.filter(t=>!isJokerType(t));if(!nj.length)return set.length>=3;const col=nj[0].color;for(const t of nj)if(t.color!==col)return false;const jk=set.length-nj.length,nums=nj.map(t=>t.number).sort((a,b)=>a-b);for(let i=1;i<nums.length;i++)if(nums[i]===nums[i-1])return false;const mn=nums[0],mx=nums[nums.length-1];for(let st=Math.max(1,mx-set.length+1);st<=mn;st++){const en=st+set.length-1;if(en>13)continue;let need=0;const u=[...nums];for(let n=st;n<=en;n++){const idx=u.indexOf(n);if(idx>=0)u.splice(idx,1);else need++}if(!u.length&&need<=jk)return true}return false}
-
-// === TWIST VALIDATION ===
-function isGroupTwist(set){
-  // Check for mirror joker — creates mirror group
-  if(set.some(t=>t.color==='mirror')) return isGroupMirror(set);
-  // Regular group + double joker can count as 2 tiles
-  const nj=set.filter(t=>!isJokerType(t));
-  const regJokers=set.filter(t=>t.color==='joker').length;
-  const dblJokers=set.filter(t=>t.color==='double').length;
-  const ccJokers=set.filter(t=>t.color==='colorchange').length; // not valid in groups
-  if(ccJokers>0) return false; // color change only for runs
-  const effectiveCount=nj.length+regJokers+dblJokers*2;
-  if(effectiveCount<3||effectiveCount>4) return false;
-  if(!nj.length) return effectiveCount>=3&&effectiveCount<=4;
-  const n=nj[0].number;const cs=new Set();
-  for(const t of nj){if(t.number!==n)return false;if(cs.has(t.color))return false;cs.add(t.color)}
-  return cs.size+regJokers+dblJokers*2<=4;
-}
-
-function isRunTwist(set){
-  if(set.some(t=>t.color==='mirror')) return isRunMirror(set);
-  const hasCC=set.some(t=>t.color==='colorchange');
-  if(hasCC) return isRunColorChange(set);
-  // Standard run with regular + double jokers
-  const nj=set.filter(t=>!isJokerType(t));
-  if(!nj.length) return set.length>=3;
-  const col=nj[0].color;
-  for(const t of nj) if(t.color!==col) return false;
-  const regJ=set.filter(t=>t.color==='joker').length;
-  const dblJ=set.filter(t=>t.color==='double').length;
-  const totalSlots=nj.length+regJ+dblJ*2;
-  if(totalSlots<3) return false;
-  const nums=nj.map(t=>t.number).sort((a,b)=>a-b);
-  for(let i=1;i<nums.length;i++) if(nums[i]===nums[i-1]) return false;
-  const mn=nums[0],mx=nums[nums.length-1];
-  // Try all possible start positions
-  for(let st=Math.max(1,mx-totalSlots+1);st<=mn;st++){
-    const en=st+totalSlots-1;if(en>13)continue;
-    // Build gap list: positions in [st..en] not covered by actual tiles
-    const numSet=new Set(nums);
-    const gaps=[];
-    for(let n=st;n<=en;n++){if(!numSet.has(n))gaps.push(n)}
-    // We need to fill these gaps using regJ single jokers and dblJ double jokers
-    // Double joker must fill exactly 2 CONSECUTIVE numbers
-    if(canFillGaps(gaps,regJ,dblJ)) return true;
-  }
-  return false;
-}
-
-function canFillGaps(gaps,regJ,dblJ){
-  // Try to fill gaps with regJ single slots and dblJ consecutive-pair slots
-  // Use recursive backtracking
-  if(gaps.length===0) return regJ>=0&&dblJ>=0;
-  if(regJ<0||dblJ<0) return false;
-  // Try filling first gap with a regular joker
-  if(regJ>0){
-    if(canFillGaps(gaps.slice(1),regJ-1,dblJ)) return true;
-  }
-  // Try filling first two gaps with a double joker (must be consecutive)
-  if(dblJ>0&&gaps.length>=2&&gaps[1]===gaps[0]+1){
-    if(canFillGaps(gaps.slice(2),regJ,dblJ-1)) return true;
-  }
-  return false;
-}
-
-function isRunColorChange(set){
-  // Color-change joker sits at a specific position in the run.
-  // Left side = one color, right side = different color.
-  // The CC joker itself represents one number in the sequence.
-  // Cannot extend beyond 1 or 13.
-  const ccIdx=[];set.forEach((t,i)=>{if(t.color==='colorchange')ccIdx.push(i)});
-  if(ccIdx.length!==1) return false; // exactly one CC supported
-  const ci=ccIdx[0];
-  const leftTiles=set.slice(0,ci);
-  const rightTiles=set.slice(ci+1);
-  if(!leftTiles.length||!rightTiles.length) return false; // must have tiles on both sides
-  // Filter non-joker tiles on each side
-  const leftNJ=leftTiles.filter(t=>!isJokerType(t));
-  const rightNJ=rightTiles.filter(t=>!isJokerType(t));
-  if(!leftNJ.length||!rightNJ.length) return set.length>=3;
-  // Each side must be single color, and different from each other
-  const lc=leftNJ[0].color,rc=rightNJ[0].color;
-  if(lc===rc) return false;
-  for(const t of leftNJ) if(t.color!==lc) return false;
-  for(const t of rightNJ) if(t.color!==rc) return false;
-  // Build the full number sequence: left tiles + CC slot + right tiles
-  // Each position in the set represents one number (including CC and regular jokers)
-  // Determine numbers: leftTiles occupy positions, then CC occupies 1, then rightTiles
-  const leftNums=leftNJ.map(t=>t.number).sort((a,b)=>a-b);
-  const rightNums=rightNJ.map(t=>t.number).sort((a,b)=>a-b);
-  // Check no duplicates
-  for(let i=1;i<leftNums.length;i++) if(leftNums[i]===leftNums[i-1]) return false;
-  for(let i=1;i<rightNums.length;i++) if(rightNums[i]===rightNums[i-1]) return false;
-  // The total length of the run = set.length, each tile/joker fills exactly one number slot
-  // (except double joker fills 2, but let's keep it simple: no double in CC runs for now)
-  const totalSlots=set.length;
-  // Try to find a valid starting number
-  const allNums=[...leftNums,...rightNums].sort((a,b)=>a-b);
-  for(let start=Math.max(1,allNums[0]);start>=Math.max(1,allNums[allNums.length-1]-totalSlots+1);start--){
-    const end=start+totalSlots-1;
-    if(end>13||start<1) continue;
-    // Check all non-joker tiles fit into [start..end]
-    let valid=true;
-    const slots=new Set();
-    for(let n=start;n<=end;n++) slots.add(n);
-    for(const n of allNums){if(!slots.has(n)){valid=false;break}slots.delete(n)}
-    if(!valid) continue;
-    // Check left tiles are before CC position and right tiles are after
-    const ccNum=start+ci; // the number the CC occupies
-    for(const n of leftNums) if(n>=ccNum){valid=false;break}
-    if(!valid) continue;
-    for(const n of rightNums) if(n<=ccNum){valid=false;break}
-    if(valid) return true;
-  }
-  return false;
-}
-
-function isGroupMirror(set){
-  // Mirror joker in group: left side mirrors right side
-  // e.g., red7, blue7, Mirror, blue7, red7
-  const mi=set.findIndex(t=>t.color==='mirror');
-  if(mi<0) return false;
-  const left=set.slice(0,mi);const right=set.slice(mi+1);
-  if(left.length===0||right.length===0) return false;
-  if(left.length!==right.length) return false;
-  // All non-joker tiles must have same number
-  const allNJ=[...left,...right].filter(t=>!isJokerType(t));
-  if(!allNJ.length) return set.length>=3;
-  const num=allNJ[0].number;
-  for(const t of allNJ) if(t.number!==num) return false;
-  // Right side colors must mirror left side (reversed order)
-  for(let i=0;i<left.length;i++){
-    const lt=left[i],rt=right[right.length-1-i];
-    if(!isJokerType(lt)&&!isJokerType(rt)){
-      if(lt.color!==rt.color) return false;
-    }
-  }
-  // No duplicate colors on one side
-  const leftColors=left.filter(t=>!isJokerType(t)).map(t=>t.color);
-  if(new Set(leftColors).size!==leftColors.length) return false;
-  return set.length>=3;
-}
-
-function isRunMirror(set){
-  // Mirror joker in run: left side numbers mirror right side
-  // e.g., red3,red4,red5,Mirror,red5,red4,red3
-  const mi=set.findIndex(t=>t.color==='mirror');
-  if(mi<0) return false;
-  const left=set.slice(0,mi);const right=set.slice(mi+1);
-  if(left.length===0||right.length===0) return false;
-  if(left.length!==right.length) return false;
-  // Both sides must be same color (all non-joker tiles)
-  const leftNJ=left.filter(t=>!isJokerType(t));
-  const rightNJ=right.filter(t=>!isJokerType(t));
-  const allNJ=[...leftNJ,...rightNJ];
-  if(!allNJ.length) return set.length>=3;
-  const col=allNJ[0].color;
-  for(const t of allNJ) if(t.color!==col) return false;
-  // Left should be ascending consecutive, right should be descending (mirror)
-  // Get numbers in positional order
-  const lnums=left.map(t=>isJokerType(t)?null:t.number);
-  const rnums=right.map(t=>isJokerType(t)?null:t.number);
-  // Right should be reverse of left
-  for(let i=0;i<left.length;i++){
-    const li=lnums[i];
-    const ri=rnums[right.length-1-i]; // mirror position
-    if(li!==null&&ri!==null&&li!==ri) return false;
-  }
-  // Check left forms consecutive sequence
-  const lreal=lnums.filter(n=>n!==null);
-  if(lreal.length>=2){
-    const sorted=[...lreal].sort((a,b)=>a-b);
-    for(let i=1;i<sorted.length;i++) if(sorted[i]!==sorted[i-1]+1) return false;
-  }
-  // All numbers must be in range 1-13
-  for(const n of [...lreal,...rnums.filter(n=>n!==null)]) if(n<1||n>13) return false;
-  return set.length>=3;
-}
-
-function advanceTurn(){
-  gameState.currentTurn=(gameState.currentTurn+1)%gameState.players.length;
-  saveTurnBackup();resetTurnTimer();
-  if(gameState.pool.length===0)checkPoolExhausted();
-  else if(isHost&&gameState.players[gameState.currentTurn].isAI&&gameState.phase==='playing')setTimeout(()=>runAI(gameState.currentTurn),800);
-}
-
-function checkPoolExhausted(){if(gameState.pool.length===0&&gameState.phase==='playing'&&isHost&&gameState.players[gameState.currentTurn].isAI)setTimeout(()=>runAI(gameState.currentTurn),800)}
-
-let noPlayTurns=0;
-function endGameWithWinner(wi){
-  gameState.phase='finished';if(turnTimer)clearInterval(turnTimer);
-  const w=gameState.players[wi],losersTotal=gameState.players.reduce((s,p,i)=>i===wi?s:s+handScore(p.hand),0);
-  const scores=gameState.players.map((p,i)=>({name:p.name,avatar:p.avatar,points:i===wi?losersTotal:-handScore(p.hand)}));
-  const data={type:'gameOver',winnerIndex:wi,winnerName:w.name,winnerAvatar:w.avatar,scores,isPoolExhaust:false};
-  if(!isSoloMode)mqttSend(data);showWinner(data);
-}
-function endGamePoolExhausted(){
-  gameState.phase='finished';if(turnTimer)clearInterval(turnTimer);
-  let minScore=Infinity,wi=0;gameState.players.forEach((p,i)=>{const s=handScore(p.hand);if(s<minScore){minScore=s;wi=i}});
-  const w=gameState.players[wi];
-  const scores=gameState.players.map((p,i)=>{if(i===wi){const l=gameState.players.reduce((s,pp,j)=>j===wi?s:s+(handScore(pp.hand)-minScore),0);return{name:p.name,avatar:p.avatar,points:l}}return{name:p.name,avatar:p.avatar,points:-(handScore(p.hand)-minScore)}});
-  const data={type:'gameOver',winnerIndex:wi,winnerName:w.name,winnerAvatar:w.avatar,scores,isPoolExhaust:true};
-  if(!isSoloMode)mqttSend(data);showWinner(data);
-}
-
-// ===== AI =====
-function runAI(pi){
-  if(gameState.phase!=='playing'||gameState.currentTurn!==pi)return;
-  document.getElementById('aiThinking').classList.add('show');
-  setTimeout(()=>{
-    document.getElementById('aiThinking').classList.remove('show');
-    if(gameState.phase!=='playing'||gameState.currentTurn!==pi)return;
-    const moved=aiTryMeld(pi);
-    if(moved){hasMeldedThisTurn=true;if(gameState.players[pi].hand.length===0){endGameWithWinner(pi);return}
-      if(aiDifficulty==='hard'){let ex=true;while(ex&&gameState.players[pi].hand.length>0){ex=aiTryMeld(pi);if(ex&&gameState.players[pi].hand.length===0){endGameWithWinner(pi);return}}}
-      if(valAll()){noPlayTurns=0;processEndTurn(pi)}else{processUndo(pi);aiDraw(pi)}}
-    else aiDraw(pi);
-  },1000+Math.random()*1500);
-}
-function aiDraw(pi){if(gameState.pool.length>0){gameState.players[pi].hand.push(gameState.pool.pop());noPlayTurns=0}else{noPlayTurns++;if(noPlayTurns>=gameState.players.length){endGamePoolExhausted();return}}advanceTurn();broadcastGS()}
-function aiTryMeld(pi){
-  const player=gameState.players[pi],hand=player.hand;if(!hand.length)return false;
-  const th=aiDifficulty==='easy'?.4:aiDifficulty==='normal'?.7:1;if(Math.random()>th+.3)return false;
-  const byNum={};hand.forEach((t,i)=>{if(!isJokerType(t)){if(!byNum[t.number])byNum[t.number]=[];byNum[t.number].push({t,i})}});
-  for(const num in byNum){const tiles=byNum[num];const cs=new Set(),chosen=[];for(const x of tiles){if(!cs.has(x.t.color)){cs.add(x.t.color);chosen.push(x)}if(chosen.length>=4)break}if(chosen.length>=3){if(!player.hasBrokenIce){const sum=chosen.reduce((s,c)=>s+c.t.number,0);if(sum<30)continue}processMeld(pi,chosen.map(c=>c.i));return true}}
-  const byCol={};hand.forEach((t,i)=>{if(!isJokerType(t)){if(!byCol[t.color])byCol[t.color]=[];byCol[t.color].push({t,i})}});
-  for(const col in byCol){const tiles=byCol[col].sort((a,b)=>a.t.number-b.t.number);const unique=[];const seen=new Set();for(const x of tiles){if(!seen.has(x.t.number)){seen.add(x.t.number);unique.push(x)}}for(let start=0;start<unique.length-2;start++){let run=[unique[start]];for(let j=start+1;j<unique.length;j++){if(unique[j].t.number===run[run.length-1].t.number+1)run.push(unique[j]);else break}if(run.length>=3){if(!player.hasBrokenIce){const sum=run.reduce((s,r)=>s+r.t.number,0);if(sum<30)continue}processMeld(pi,run.map(r=>r.i));return true}}}
-  if(aiDifficulty!=='easy'&&gameState.table.length>0&&player.hasBrokenIce){for(let si=0;si<gameState.table.length;si++){const set=gameState.table[si];for(let hi=hand.length-1;hi>=0;hi--){const test=[...set,hand[hi]];if(valSet(test)){processMeld(pi,[hi],si);return true}}}}
-  return false;
-}
-
-// ===== TIMER =====
-function startTurnTimer(){turnTimeLeft=TURN_TIME;updateTimerBar();if(turnTimer)clearInterval(turnTimer);turnTimer=setInterval(()=>{if(gameState&&gameState.players[gameState.currentTurn].isAI)return;turnTimeLeft--;updateTimerBar();if(turnTimeLeft<=0&&isHost){const ct=gameState.currentTurn;if(hasMeldedThisTurn){sendTP(ct,{type:'toast',msg:'超時！還原並罰抽 1 張'});processUndo(ct);if(gameState.pool.length)gameState.players[ct].hand.push(gameState.pool.pop());advanceTurn();broadcastGS()}else{processDraw(ct)}}},1000)}
-function resetTurnTimer(){turnTimeLeft=TURN_TIME;updateTimerBar()}
-function updateTimerBar(){const b=document.getElementById('timerBar');if(!b)return;const p=(turnTimeLeft/TURN_TIME)*100;b.style.width=p+'%';b.className='timer-bar'+(p<20?' danger':p<40?' warning':'')}
-
-// ===== RENDER =====
-let lastRenderedTurn=-1;
-let prevTableTileIds=new Set(); // track table tile IDs between renders for non-host highlight
-
-function renderGame(state){
-  currentViewState=state;myPlayerIndex=state.myIndex;
-  // Detect turn change — reset local state for non-host + detect last played tiles
-  if(state.currentTurn!==lastRenderedTurn){
-    const prevTurn=lastRenderedTurn;
-    lastRenderedTurn=state.currentTurn;
-    // Clear my-played highlights from previous turn
-    myPlayedTileIds=new Set();
-    if(!isHost&&!isSoloMode){
-      hasMeldedThisTurn=false;borrowedTileIds=new Set();
-      // Save snapshot of table at turn start for tracking my played tiles
-      if(state.currentTurn===state.myIndex){
-        turnBackupSnapshot=new Set();
-        (state.table||[]).forEach(s=>(s||[]).forEach(t=>turnBackupSnapshot.add(t.id)));
-      }
-      // Detect newly placed tiles on table by previous player
-      if(prevTurn>=0){
-        const newTableIds=new Set();
-        (state.table||[]).forEach(s=>(s||[]).forEach(t=>newTableIds.add(t.id)));
-        lastPlayedTileIds=new Set();
-        newTableIds.forEach(id=>{if(!prevTableTileIds.has(id))lastPlayedTileIds.add(id)});
-      }
-    }
-    // For host: lastPlayedTileIds is set by computeLastPlayedTiles, clear on NEXT turn change
-    if(isHost||isSoloMode){
-      // lastPlayedTileIds was set at end of previous turn, keep it — it will be cleared on the NEXT turn change
-    }
-    // Update snapshot
-    prevTableTileIds=new Set();
-    (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
-  } else {
-    // Not a turn change
-    if(!isHost&&!isSoloMode){
-      prevTableTileIds=new Set();
-      (state.table||[]).forEach(s=>(s||[]).forEach(t=>prevTableTileIds.add(t.id)));
-      // Track tiles I'm placing this turn
-      if(state.currentTurn===state.myIndex&&hasMeldedThisTurn){
-        const startIds=new Set();if(turnBackupSnapshot)turnBackupSnapshot.forEach(id=>startIds.add(id));
-        myPlayedTileIds=new Set();
-        (state.table||[]).forEach(s=>(s||[]).forEach(t=>{if(!startIds.has(t.id))myPlayedTileIds.add(t.id)}));
-      }
-    }
-    // For host: track tiles I'm placing this turn by comparing with turnBackup
-    if((isHost||isSoloMode)&&state.currentTurn===state.myIndex&&turnBackup){
-      const oldIds=new Set();turnBackup.table.forEach(s=>s.forEach(t=>oldIds.add(t.id)));
-      myPlayedTileIds=new Set();
-      gameState.table.forEach(s=>s.forEach(t=>{if(!oldIds.has(t.id))myPlayedTileIds.add(t.id)}));
-    }
-  }
-  const tp=state.players[state.currentTurn];
-  document.getElementById('turnAvatar').textContent=AVATARS[tp.avatar];
-  document.getElementById('turnName').textContent=tp.name+(tp.isAI?' 🤖':'');
-  document.getElementById('poolCount').textContent='牌堆: '+state.poolCount;
-  const isMyTurn=state.currentTurn===state.myIndex;
-  document.querySelector('.game-header .turn-info').style.color=isMyTurn?'var(--accent-orange)':'var(--text-dark)';
-  // Turn banner
-  const banner=document.getElementById('turnBanner');
-  banner.classList.toggle('show',isMyTurn&&!tp.isAI);
-  const ob=document.getElementById('opponentsBar');ob.innerHTML='';
-  state.players.forEach((p,i)=>{if(i===state.myIndex)return;const c=document.createElement('div');c.className='opponent-card'+(i===state.currentTurn?' active-turn':'');c.innerHTML=`<span class="opp-avatar">${AVATARS[p.avatar]}</span><span>${p.name}${p.isAI?' 🤖':''}</span><span class="tile-count">${p.handCount} 張</span>`;ob.appendChild(c)});
-  // Preserve local sort order for ALL players (sort is display-only, never modifies gameState)
-  let hand=state.players[state.myIndex].hand||[];
-  if(localHandOrder.length>0&&hand.length>0){
-    // Detect new tiles (tiles in hand not in our local order = just drawn)
-    const oldIds=new Set(localHandOrder);
-    const newTiles=hand.filter(t=>!oldIds.has(t.id));
-    if(newTiles.length===1&&!lastDrawnTileId){
-      lastDrawnTileId=newTiles[0].id;
-    }
-    // Re-sort hand according to local order, put new tiles at end
-    const orderMap=new Map(localHandOrder.map((id,i)=>([id,i])));
-    const sorted=[...hand].sort((a,b)=>{
-      const ai=orderMap.has(a.id)?orderMap.get(a.id):99999;
-      const bi=orderMap.has(b.id)?orderMap.get(b.id):99999;
-      return ai-bi;
-    });
-    hand=sorted;
-    localHandOrder=hand.map(t=>t.id);
-  } else if(hand.length>0){
-    localHandOrder=hand.map(t=>t.id);
-  }
-  renderTable(state.table);renderHand(hand);
-  document.querySelectorAll('.ctrl-btn').forEach(b=>{if(b.classList.contains('sort-btn'))return;b.disabled=!isMyTurn});
-  updateMainBtn();
-}
-function renderTable(table){
-  const c=document.getElementById('tableSets');
-  if(!table.length){c.innerHTML='<div class="empty-table-msg">桌面上還沒有牌組，出牌開始遊戲吧！</div>';return}
-  c.innerHTML='';
-  table.forEach((set,si)=>{
-    const d=document.createElement('div');d.className='table-set'+(si===selectedTableSet?' selected-set':'');d.dataset.setIndex=si;
-    if(!valSet(set))d.classList.add('invalid');
-    set.forEach((t,ti)=>{const el=mkTile(t);if(lastPlayedTileIds.has(t.id))el.classList.add('last-played');if(myPlayedTileIds.has(t.id))el.classList.add('my-played');el.onclick=e=>{e.stopPropagation();selectTableTile(si,ti,el)};if(selectedTableTiles.some(x=>x.si===si&&x.ti===ti))el.classList.add('table-tile-selected');d.appendChild(el)});
-    d.onclick=()=>{document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));d.classList.add('selected-set');selectedTableSet=si};
-    c.appendChild(d);
-  });
-}
-function selectTableTile(si,ti,el){const idx=selectedTableTiles.findIndex(x=>x.si===si&&x.ti===ti);if(idx>=0){selectedTableTiles.splice(idx,1);el.classList.remove('table-tile-selected')}else{selectedTableTiles.push({si,ti});el.classList.add('table-tile-selected')}selectedTableSet=si}
-function renderHand(hand){
-  const c=document.getElementById('handTiles');c.innerHTML='';
-  hand.forEach((tile,i)=>{const el=mkTile(tile);el.dataset.handIndex=i;if(borrowedTileIds.has(tile.id))el.classList.add('borrowed');if(lastDrawnTileId===tile.id)el.classList.add('just-drawn');if(selectedTiles.has(i))el.classList.add('selected');el.onclick=()=>{if(selectedTiles.has(i)){selectedTiles.delete(i);el.classList.remove('selected')}else{selectedTiles.add(i);el.classList.add('selected')}};c.appendChild(el)});
-  if(lastDrawnTileId!==null){requestAnimationFrame(()=>c.scrollLeft=c.scrollWidth);lastDrawnTileId=null}
-}
-// SVG joker faces inspired by real Rummikub Twist tiles
-const JOKER_SVGS = {
-  // Red: full circle smiling face
-  joker: `<svg class="joker-svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#E8564A" stroke-width="2.5"/><circle cx="14" cy="16" r="1.8" fill="#E8564A"/><circle cx="26" cy="16" r="1.8" fill="#E8564A"/><path d="M12 24 Q20 31 28 24" fill="none" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/><path d="M11 13 Q14 10 17 13" fill="none" stroke="#E8564A" stroke-width="1.2"/><path d="M23 13 Q26 10 29 13" fill="none" stroke="#E8564A" stroke-width="1.2"/></svg>`,
-  // Blue: double overlapping moon faces
-  double: `<svg class="joker-svg" viewBox="0 0 40 40"><ellipse cx="16" cy="20" rx="12" ry="14" fill="none" stroke="#4A8FE8" stroke-width="2"/><circle cx="13" cy="17" r="1.5" fill="#4A8FE8"/><path d="M10 23 Q15 27 20 23" fill="none" stroke="#4A8FE8" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="24" cy="20" rx="12" ry="14" fill="none" stroke="#4A8FE8" stroke-width="2" opacity=".5"/></svg>`,
-  // Black/white: half-and-half face split vertically
-  colorchange: `<svg class="joker-svg" viewBox="0 0 40 40"><defs><clipPath id="ccL"><rect x="0" y="0" width="20" height="40"/></clipPath><clipPath id="ccR"><rect x="20" y="0" width="20" height="40"/></clipPath></defs><circle cx="20" cy="20" r="15" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="20" cy="20" r="15" fill="#333" clip-path="url(#ccR)"/><circle cx="15" cy="16" r="1.8" fill="#333"/><circle cx="25" cy="16" r="1.8" fill="#fff"/><path d="M13 24 Q20 30 27 24" fill="none" stroke="#333" stroke-width="1.5" clip-path="url(#ccL)"/><path d="M13 24 Q20 30 27 24" fill="none" stroke="#fff" stroke-width="1.5" clip-path="url(#ccR)"/></svg>`,
-  // Yellow/orange: mirrored half-faces facing outward
-  mirror: `<svg class="joker-svg" viewBox="0 0 40 40"><path d="M18 6 A14 14 0 0 0 18 34" fill="none" stroke="#D4940A" stroke-width="2.2"/><circle cx="13" cy="16" r="1.5" fill="#D4940A"/><path d="M10 23 Q14 27 18 23" fill="none" stroke="#D4940A" stroke-width="1.5" stroke-linecap="round"/><path d="M22 6 A14 14 0 0 1 22 34" fill="none" stroke="#D4940A" stroke-width="2.2"/><circle cx="27" cy="16" r="1.5" fill="#D4940A"/><path d="M22 23 Q26 27 30 23" fill="none" stroke="#D4940A" stroke-width="1.5" stroke-linecap="round"/></svg>`
-};
-
-function mkTile(tile){
-  const el=document.createElement('div');el.className='tile';el.dataset.color=tile.color;el.dataset.tileId=tile.id;
-  if(tile.color==='joker') el.innerHTML=JOKER_SVGS.joker+'<span class="tile-label">百搭</span>';
-  else if(tile.color==='double') el.innerHTML=JOKER_SVGS.double+'<span class="tile-label">雙人</span>';
-  else if(tile.color==='colorchange') el.innerHTML=JOKER_SVGS.colorchange+'<span class="tile-label">變色</span>';
-  else if(tile.color==='mirror') el.innerHTML=JOKER_SVGS.mirror+'<span class="tile-label">鏡射</span>';
-  else el.innerHTML=`<span class="tile-num">${tile.number}</span><span class="tile-dots">${'●'.repeat(Math.min(tile.number,4))}</span>`;
-  return el;
-}
-
-// ===== PLAYER ACTIONS =====
-function clearAllSelections(){selectedTiles.clear();selectedTableTiles=[];selectedTableSet=-1;document.querySelectorAll('.table-set').forEach(s=>s.classList.remove('selected-set'));document.querySelectorAll('.tile.table-tile-selected').forEach(t=>t.classList.remove('table-tile-selected'))}
-function clearAllSelectionsAndBorrowed(){clearAllSelections();borrowedTileIds=new Set()}
-
-function sortHand(by){
-  if(!currentViewState)return;
-  const hand=currentViewState.players[myPlayerIndex].hand;if(!hand)return;
-  const sorted=[...hand];
-  if(by==='color')sorted.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return COLORS.indexOf(a.color)-COLORS.indexOf(b.color)||a.number-b.number});
-  else sorted.sort((a,b)=>{if(a.color==='joker')return 1;if(b.color==='joker')return -1;return a.number-b.number||COLORS.indexOf(a.color)-COLORS.indexOf(b.color)});
-  // Only update local display order, never modify gameState
-  localHandOrder=sorted.map(t=>t.id);
-  clearAllSelections();renderHand(sorted);
-}
-
-// Local hand order tracking for non-host players
-let localHandOrder=[];
-
-function getSelectedTileIds(){
-  // Get tile IDs from selected hand indices using the locally sorted hand displayed to user
-  // We need to use the hand as rendered (sorted by localHandOrder)
-  const rawHand=currentViewState?.players?.[myPlayerIndex]?.hand;
-  if(!rawHand)return[];
-  // Reconstruct the displayed order using localHandOrder
-  let displayHand=rawHand;
-  if(localHandOrder.length>0){
-    const orderMap=new Map(localHandOrder.map((id,i)=>([id,i])));
-    displayHand=[...rawHand].sort((a,b)=>{
-      const ai=orderMap.has(a.id)?orderMap.get(a.id):99999;
-      const bi=orderMap.has(b.id)?orderMap.get(b.id):99999;
-      return ai-bi;
-    });
-  }
-  return Array.from(selectedTiles).map(i=>displayHand[i]?.id).filter(Boolean);
-}
-
-function resolveIdsToIndices(pi,tileIds){
-  // Convert tile IDs to indices in gameState hand
-  const hand=gameState.players[pi].hand;
-  return tileIds.map(id=>hand.findIndex(t=>t.id===id)).filter(i=>i>=0);
-}
-
-function playSelected(){
-  if(!selectedTiles.size){showToast('請先選取要出的牌');return}
-  const tileIds=getSelectedTileIds();clearAllSelections();
-  if(isHost||isSoloMode){
-    const indices=resolveIdsToIndices(myPlayerIndex,tileIds);
-    sendAction({action:'meld',tileIndices:indices});
-  }else{
-    hasMeldedThisTurn=true;updateMainBtn();
-    mqttSend({type:'gameAction',playerId:myId,action:'meld',tileIds});
-  }
-}
-function addToExistingSet(){
-  if(!selectedTiles.size){showToast('請先選取牌');return}if(selectedTableSet<0){showToast('請先點擊桌面牌組');return}
-  const tileIds=getSelectedTileIds();const tsi=selectedTableSet;clearAllSelections();
-  if(isHost||isSoloMode){
-    const indices=resolveIdsToIndices(myPlayerIndex,tileIds);
-    sendAction({action:'meld',tileIndices:indices,targetSetIndex:tsi});
-  }else{
-    hasMeldedThisTurn=true;updateMainBtn();
-    mqttSend({type:'gameAction',playerId:myId,action:'meld',tileIds,targetSetIndex:tsi});
-  }
-}
-function splitFromSet(){
-  if(!selectedTableTiles.length){showToast('請先點擊桌面牌組中要取出的牌');return}
-  const si=selectedTableTiles[0].si;const positions=selectedTableTiles.filter(x=>x.si===si).map(x=>x.ti);clearAllSelections();
-  if(isHost||isSoloMode)sendAction({action:'splitTake',setIndex:si,tilePositions:positions});
-  else{hasMeldedThisTurn=true;updateMainBtn();mqttSend({type:'gameAction',playerId:myId,action:'splitTake',setIndex:si,tilePositions:positions})}
-}
-function replaceJoker(){
-  if(selectedTiles.size!==1){showToast('請選取手牌中 1 張牌來替換鬼牌');return}if(!selectedTableTiles.length){showToast('請點擊桌面上要替換的鬼牌');return}
-  const jt=selectedTableTiles[0];const tileIds=getSelectedTileIds();clearAllSelections();
-  if(isHost||isSoloMode){
-    const idx=resolveIdsToIndices(myPlayerIndex,tileIds);
-    sendAction({action:'replaceJoker',handTileIndex:idx[0],setIndex:jt.si,jokerPos:jt.ti});
-  }else{
-    hasMeldedThisTurn=true;updateMainBtn();
-    mqttSend({type:'gameAction',playerId:myId,action:'replaceJoker',tileId:tileIds[0],setIndex:jt.si,jokerPos:jt.ti});
-  }
-}
-function drawTile(){clearAllSelections();sendAction({action:'draw'})}
-function endTurn(){clearAllSelections();sendAction({action:'endTurn'})}
-function mainBtnClick(){if(hasMeldedThisTurn)endTurn();else drawTile()}
-function updateMainBtn(){const btn=document.getElementById('mainBtn');if(!btn)return;if(hasMeldedThisTurn){btn.textContent='結束回合 ✓';btn.className='ctrl-btn main-btn end-mode'}else{btn.textContent='摸牌';btn.className='ctrl-btn main-btn draw-mode'}}
-function undoTurn(){clearAllSelectionsAndBorrowed();hasMeldedThisTurn=false;updateMainBtn();sendAction({action:'undo'})}
-
-function sendAction(a){
-  if(isHost||isSoloMode) doAction(myPlayerIndex,a);
-  else mqttSend({type:'gameAction',playerId:myId,...a});
-}
-
-// ===== WINNER =====
-function showWinner(data){
-  if(turnTimer)clearInterval(turnTimer);
-  document.getElementById('winnerOverlay').classList.add('show');
-  document.getElementById('winnerEmoji').textContent=AVATARS[data.winnerAvatar];
-  document.getElementById('winnerName').textContent=data.winnerName+' 獲勝！';
-  document.getElementById('winnerMsg').textContent=data.isPoolExhaust?'牌堆已用盡，手牌最少者獲勝！':'恭喜獲勝！';
-  const tbl=document.getElementById('scoresTable');
-  tbl.innerHTML='<div style="font-weight:800;margin-bottom:8px;text-align:center">計分板</div>';
-  data.scores.sort((a,b)=>b.points-a.points).forEach(s=>{const r=document.createElement('div');r.className='score-row';const isPos=s.points>=0;r.innerHTML=`<span class="sr-avatar">${AVATARS[s.avatar]}</span><span class="sr-name">${s.name}</span><span class="sr-pts ${isPos?'positive':'negative'}">${isPos?'+':''}${s.points} 點</span>`;tbl.appendChild(r)});
-}
-
-initAvatars();
-
-// Populate tile inventory in rules modal
-(function(){
-  const colorMap={red:'invRed',blue:'invBlue',yellow:'invYellow',black:'invBlack'};
-  for(const [col,elId] of Object.entries(colorMap)){
-    const row=document.getElementById(elId);if(!row)continue;
-    for(let n=1;n<=13;n++){
-      for(let s=0;s<2;s++){
-        const t=document.createElement('div');t.className='mini-tile';t.dataset.c=col;
-        t.innerHTML=`<span class="mt-num">${n}</span>`;
-        row.appendChild(t);
-      }
-    }
-  }
-})();
-
-// Warn before leaving during active game
-window.addEventListener('beforeunload',function(e){
-  if(gameState&&gameState.phase==='playing'){
-    e.preventDefault();
-    e.returnValue='';
-  }
-});
-</script>
-</body>
+
+        <!-- Vue 3 應用程式邏輯 -->
+        <script>
+            window.addEventListener("DOMContentLoaded", function () {
+                const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+
+                // ===== 核心驗證邏輯 (保留原始 Twist 規則) =====
+                const COLORS = ["red", "blue", "yellow", "black"];
+                const AI_NAMES = ["小花", "阿呆", "球球", "豆豆", "奶茶", "糰子", "麻糬"];
+                const JOKER_SVGS = {
+                    joker: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#E8564A" stroke-width="2.5"/><circle cx="14" cy="16" r="1.8" fill="#E8564A"/><circle cx="26" cy="16" r="1.8" fill="#E8564A"/><path d="M12 24 Q20 31 28 24" fill="none" stroke="#E8564A" stroke-width="2" stroke-linecap="round"/><path d="M11 13 Q14 10 17 13" fill="none" stroke="#E8564A" stroke-width="1.2"/><path d="M23 13 Q26 10 29 13" fill="none" stroke="#E8564A" stroke-width="1.2"/></svg>`,
+                    double: `<svg viewBox="0 0 40 40"><ellipse cx="16" cy="20" rx="12" ry="14" fill="none" stroke="#4A8FE8" stroke-width="2"/><circle cx="13" cy="17" r="1.5" fill="#4A8FE8"/><path d="M10 23 Q15 27 20 23" fill="none" stroke="#4A8FE8" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="24" cy="20" rx="12" ry="14" fill="none" stroke="#4A8FE8" stroke-width="2" opacity=".5"/></svg>`,
+                    colorchange: `<svg viewBox="0 0 40 40"><defs><clipPath id="ccL"><rect x="0" y="0" width="20" height="40"/></clipPath><clipPath id="ccR"><rect x="20" y="0" width="20" height="40"/></clipPath></defs><circle cx="20" cy="20" r="15" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="20" cy="20" r="15" fill="#333" clip-path="url(#ccR)"/><circle cx="15" cy="16" r="1.8" fill="#333"/><circle cx="25" cy="16" r="1.8" fill="#fff"/><path d="M13 24 Q20 30 27 24" fill="none" stroke="#333" stroke-width="1.5" clip-path="url(#ccL)"/><path d="M13 24 Q20 30 27 24" fill="none" stroke="#fff" stroke-width="1.5" clip-path="url(#ccR)"/></svg>`,
+                    mirror: `<svg viewBox="0 0 40 40"><path d="M18 6 A14 14 0 0 0 18 34" fill="none" stroke="#D4940A" stroke-width="2.2"/><circle cx="13" cy="16" r="1.5" fill="#D4940A"/><path d="M10 23 Q14 27 18 23" fill="none" stroke="#D4940A" stroke-width="1.5" stroke-linecap="round"/><path d="M22 6 A14 14 0 0 1 22 34" fill="none" stroke="#D4940A" stroke-width="2.2"/><circle cx="27" cy="16" r="1.5" fill="#D4940A"/><path d="M22 23 Q26 27 30 23" fill="none" stroke="#D4940A" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+                };
+
+                function isJokerType(t) {
+                    return t.color === "joker" || t.color === "double" || t.color === "colorchange" || t.color === "mirror";
+                }
+                function tileScore(t) {
+                    if (t.color === "mirror") return 0;
+                    if (isJokerType(t)) return 30;
+                    return t.number;
+                }
+                function handScore(hand) {
+                    return hand.reduce((s, t) => s + tileScore(t), 0);
+                }
+                function valAll(table) {
+                    return table.every((s) => valSet(s));
+                }
+                // 若牌組含鏡射牌，自動將其移至正中間位置（奇數長度才合法）
+                function normalizeMirrorSet(set) {
+                    const mirrorIdx = set.findIndex((t) => t.color === "mirror");
+                    if (mirrorIdx < 0) return set;
+                    if (set.length % 2 === 0) return set; // 偶數長度不可能有中心
+                    const center = Math.floor(set.length / 2);
+                    if (mirrorIdx === center) return set;
+                    const arr = [...set];
+                    arr.splice(mirrorIdx, 1);
+                    arr.splice(center, 0, set[mirrorIdx]);
+                    return arr;
+                }
+                function valSet(set) {
+                    if (set.length < 3) return false;
+                    if (set.some((t) => t.color === "mirror")) {
+                        if (set.length % 2 === 0) return false;
+                        const norm = normalizeMirrorSet(set);
+                        return isGroupMirror(norm) || isRunMirror(norm);
+                    }
+                    return isGroupTwist(set) || isRunTwist(set);
+                }
+
+                function isGroupTwist(set) {
+                    if (set.some((t) => t.color === "mirror")) return isGroupMirror(set);
+                    const nj = set.filter((t) => !isJokerType(t)),
+                        regJokers = set.filter((t) => t.color === "joker").length,
+                        dblJokers = set.filter((t) => t.color === "double").length,
+                        ccJokers = set.filter((t) => t.color === "colorchange").length;
+                    if (ccJokers > 0) return false;
+                    const effectiveCount = nj.length + regJokers + dblJokers * 2;
+                    if (effectiveCount < 3 || effectiveCount > 4) return false;
+                    if (!nj.length) return effectiveCount >= 3 && effectiveCount <= 4;
+                    const n = nj[0].number,
+                        cs = new Set();
+                    for (const t of nj) {
+                        if (t.number !== n) return false;
+                        if (cs.has(t.color)) return false;
+                        cs.add(t.color);
+                    }
+                    return cs.size + regJokers + dblJokers * 2 <= 4;
+                }
+
+                function isRunTwist(set) {
+                    if (set.some((t) => t.color === "mirror")) return isRunMirror(set);
+                    if (set.some((t) => t.color === "colorchange")) return isRunColorChange(set);
+                    const nj = set.filter((t) => !isJokerType(t));
+                    const totalSlots = set.reduce((s, t) => s + (t.color === "double" ? 2 : 1), 0);
+                    if (totalSlots < 3 || totalSlots > 13) return false;
+                    if (!nj.length) return true;
+                    const col = nj[0].color;
+                    for (const t of nj) if (t.color !== col) return false;
+                    const maxStart = 14 - totalSlots;
+                    for (let st = 1; st <= maxStart; st++) {
+                        let expected = st,
+                            ok = true;
+                        for (const t of set) {
+                            if (t.color === "double") {
+                                if (expected + 1 > 13) {
+                                    ok = false;
+                                    break;
+                                }
+                                expected += 2;
+                            } else if (t.color === "joker") {
+                                if (expected > 13) {
+                                    ok = false;
+                                    break;
+                                }
+                                expected += 1;
+                            } else {
+                                if (expected > 13 || t.number !== expected) {
+                                    ok = false;
+                                    break;
+                                }
+                                expected += 1;
+                            }
+                        }
+                        if (ok) return true;
+                    }
+                    return false;
+                }
+
+                function isRunColorChange(set) {
+                    const ccIdx = [];
+                    set.forEach((t, i) => {
+                        if (t.color === "colorchange") ccIdx.push(i);
+                    });
+                    if (ccIdx.length !== 1) return false;
+                    const ci = ccIdx[0],
+                        leftTiles = set.slice(0, ci),
+                        rightTiles = set.slice(ci + 1);
+                    if (!leftTiles.length || !rightTiles.length) return false;
+                    const leftNJ = leftTiles.filter((t) => !isJokerType(t)),
+                        rightNJ = rightTiles.filter((t) => !isJokerType(t));
+                    if (!leftNJ.length || !rightNJ.length) return set.length >= 3;
+                    const lc = leftNJ[0].color,
+                        rc = rightNJ[0].color;
+                    if (lc === rc) return false;
+                    for (const t of leftNJ) if (t.color !== lc) return false;
+                    for (const t of rightNJ) if (t.color !== rc) return false;
+                    const leftNums = leftNJ.map((t) => t.number).sort((a, b) => a - b),
+                        rightNums = rightNJ.map((t) => t.number).sort((a, b) => a - b);
+                    for (let i = 1; i < leftNums.length; i++) if (leftNums[i] === leftNums[i - 1]) return false;
+                    for (let i = 1; i < rightNums.length; i++) if (rightNums[i] === rightNums[i - 1]) return false;
+                    const totalSlots = set.length,
+                        allNums = [...leftNums, ...rightNums].sort((a, b) => a - b);
+                    for (let start = Math.max(1, allNums[0]); start >= Math.max(1, allNums[allNums.length - 1] - totalSlots + 1); start--) {
+                        const end = start + totalSlots - 1;
+                        if (end > 13 || start < 1) continue;
+                        let valid = true;
+                        const slots = new Set();
+                        for (let n = start; n <= end; n++) slots.add(n);
+                        for (const n of allNums) {
+                            if (!slots.has(n)) {
+                                valid = false;
+                                break;
+                            }
+                            slots.delete(n);
+                        }
+                        if (!valid) continue;
+                        const ccNum = start + ci;
+                        for (const n of leftNums)
+                            if (n >= ccNum) {
+                                valid = false;
+                                break;
+                            }
+                        if (!valid) continue;
+                        for (const n of rightNums)
+                            if (n <= ccNum) {
+                                valid = false;
+                                break;
+                            }
+                        if (valid) return true;
+                    }
+                    return false;
+                }
+
+                function isGroupMirror(set) {
+                    const mi = set.findIndex((t) => t.color === "mirror");
+                    if (mi < 0) return false;
+                    const left = set.slice(0, mi),
+                        right = set.slice(mi + 1);
+                    if (left.length === 0 || right.length === 0 || left.length !== right.length) return false;
+                    const allNJ = [...left, ...right].filter((t) => !isJokerType(t));
+                    if (!allNJ.length) return set.length >= 3;
+                    const num = allNJ[0].number;
+                    for (const t of allNJ) if (t.number !== num) return false;
+                    for (let i = 0; i < left.length; i++) {
+                        const lt = left[i],
+                            rt = right[right.length - 1 - i];
+                        if (!isJokerType(lt) && !isJokerType(rt) && lt.color !== rt.color) return false;
+                    }
+                    const leftColors = left.filter((t) => !isJokerType(t)).map((t) => t.color);
+                    if (new Set(leftColors).size !== leftColors.length) return false;
+                    return set.length >= 3;
+                }
+
+                function isRunMirror(set) {
+                    const mi = set.findIndex((t) => t.color === "mirror");
+                    if (mi < 0) return false;
+                    const left = set.slice(0, mi),
+                        right = set.slice(mi + 1);
+                    if (left.length === 0 || right.length === 0 || left.length !== right.length) return false;
+                    const allNJ = [...left, ...right].filter((t) => !isJokerType(t));
+                    if (!allNJ.length) return set.length >= 3;
+                    const col = allNJ[0].color;
+                    for (const t of allNJ) if (t.color !== col) return false;
+                    const lnums = left.map((t) => (isJokerType(t) ? null : t.number)),
+                        rnums = right.map((t) => (isJokerType(t) ? null : t.number));
+                    for (let i = 0; i < left.length; i++) {
+                        const li = lnums[i],
+                            ri = rnums[right.length - 1 - i];
+                        if (li !== null && ri !== null && li !== ri) return false;
+                    }
+                    const lreal = lnums.filter((n) => n !== null);
+                    if (lreal.length >= 2) {
+                        const sorted = [...lreal].sort((a, b) => a - b);
+                        for (let i = 1; i < sorted.length; i++) if (sorted[i] !== sorted[i - 1] + 1) return false;
+                    }
+                    for (const n of [...lreal, ...rnums.filter((n) => n !== null)]) if (n < 1 || n > 13) return false;
+                    return set.length >= 3;
+                }
+
+                function autoSortTableSets(table) {
+                    table.forEach((set, i) => {
+                        if (set.some((t) => t.color === "mirror" || t.color === "colorchange")) return;
+                        if (isRunTwist(set)) {
+                            const nj = set.filter((t) => !isJokerType(t)).sort((a, b) => a.number - b.number),
+                                jks = set.filter((t) => isJokerType(t));
+                            if (!nj.length) return;
+                            let start = nj[0].number,
+                                totalLen = nj.length + jks.reduce((s, t) => s + (t.color === "double" ? 2 : 1), 0);
+                            const sorted = [],
+                                used = [...nj];
+                            let ji = 0;
+                            for (let n = start; n < start + totalLen; n++) {
+                                const idx = used.findIndex((t) => t.number === n);
+                                if (idx >= 0) {
+                                    sorted.push(used[idx]);
+                                    used.splice(idx, 1);
+                                } else if (ji < jks.length) {
+                                    sorted.push(jks[ji++]);
+                                    if (jks[ji - 1] && jks[ji - 1].color === "double") n++;
+                                }
+                            }
+                            if (sorted.length === set.length) table[i] = sorted;
+                        } else if (isGroupTwist(set)) {
+                            set.sort((a, b) => {
+                                if (isJokerType(a)) return 1;
+                                if (isJokerType(b)) return -1;
+                                return COLORS.indexOf(a.color) - COLORS.indexOf(b.color);
+                            });
+                        }
+                    });
+                }
+
+                // ===== Vue App =====
+                app = createApp({
+                    setup() {
+                        // UI States
+                        const mode = ref("solo");
+                        const phase = ref("lobby");
+                        const nickname = ref("");
+                        const roomCodeInput = ref("");
+                        const aiCount = ref(2);
+                        const aiDiff = ref("normal");
+                        const avatars = ["🐱", "🐶", "🐰", "🐻", "🦊", "🐼", "🐨", "🦁"];
+                        const selectedAvatar = ref(0);
+                        const showRules = ref(false);
+                        const toastMsg = ref("");
+                        const aiThinking = ref(false);
+                        const isConnecting = ref(false);
+
+                        let toastTimer = null;
+                        const showToast = (msg, dur = 3000) => {
+                            toastMsg.value = msg;
+                            if (toastTimer) clearTimeout(toastTimer);
+                            toastTimer = setTimeout(() => (toastMsg.value = ""), dur);
+                        };
+
+                        // Network & Auth
+                        const myId = ref("");
+                        const roomCode = ref("");
+                        const isHost = ref(false);
+                        const isSoloMode = ref(false);
+
+                        // Game UI States
+                        const players = ref([]);
+                        const table = ref([]);
+                        const poolCount = ref(0);
+                        const currentTurn = ref(0);
+                        const myIndex = ref(-1);
+                        const localHand = ref([]);
+                        const localHandOrder = ref([]); // Store order of IDs
+                        const gameOverData = ref(null);
+
+                        // Selection & Interaction
+                        const selectedHandTiles = ref([]);
+                        const selectedTableTiles = ref([]);
+                        const selectedTableSet = ref(-1);
+                        const borrowedTileIds = ref([]);
+                        const lastPlayedTileIds = ref([]);
+                        const myPlayedTileIds = ref([]);
+                        const lastDrawnTileId = ref(null);
+                        const hasMeldedThisTurn = ref(false);
+                        const handContainer = ref(null);
+
+                        // Timer
+                        const turnTimeLeft = ref(120);
+                        const TURN_TIME = 120;
+                        let turnTimerObj = null;
+
+                        // Engine (Host Authority)
+                        let engine = { phase: "lobby", players: [], table: [], pool: [], currentTurn: 0 };
+                        let turnBackup = null;
+                        let turnBackupSnapshot = new Set();
+                        let prevTableTileIds = new Set();
+                        let lastRenderedTurn = -1;
+
+                        // Computed
+                        const isMyTurn = computed(() => phase.value === "playing" && currentTurn.value === myIndex.value && myIndex.value !== -1);
+                        const isCurrentPlayerAI = computed(() => players.value[currentTurn.value]?.isAI);
+                        const currentPlayerInfo = computed(() => players.value[currentTurn.value] || {});
+                        const opponents = computed(() => {
+                            return players.value.map((p, i) => ({ ...p, isCurrentTurn: i === currentTurn.value, index: i })).filter((p) => p.index !== myIndex.value);
+                        });
+                        const displayedHand = computed(() => {
+                            if (localHandOrder.value.length === 0) return localHand.value;
+                            const orderMap = new Map(localHandOrder.value.map((id, i) => [id, i]));
+                            return [...localHand.value].sort((a, b) => {
+                                const ai = orderMap.has(a.id) ? orderMap.get(a.id) : 99999;
+                                const bi = orderMap.has(b.id) ? orderMap.get(b.id) : 99999;
+                                return ai - bi;
+                            });
+                        });
+                        const timerWidth = computed(() => (turnTimeLeft.value / TURN_TIME) * 100);
+                        const timerColor = computed(() => (timerWidth.value < 20 ? "bg-tred animate-pulse" : timerWidth.value < 40 ? "bg-yellow" : "bg-green"));
+
+                        const textColorClass = (color) => {
+                            const map = { red: "text-tred", blue: "text-tblue", yellow: "text-tyellow", black: "text-tblack" };
+                            return map[color] || "text-dark";
+                        };
+
+                        const tableTileClasses = (tile, si, ti) => {
+                            return {
+                                "tile-table-selected": isSelectedTableTile(si, ti),
+                                "ring-2 ring-orange ring-offset-1": lastPlayedTileIds.value.includes(tile.id),
+                                "ring-2 ring-green ring-offset-1 shadow-[0_0_8px_rgba(126,206,138,0.6)]": myPlayedTileIds.value.includes(tile.id),
+                            };
+                        };
+
+                        // MQTT Network logic
+                        let mqttClient = null;
+                        const MQTT_BROKERS = ["wss://broker.hivemq.com:8884/mqtt", "wss://test.mosquitto.org:8081/mqtt"];
+                        let currentBrokerIdx = 0;
+
+                        const getTopic = () => `rummikub-game/${roomCode.value}`;
+                        const getDMTopic = (id) => `rummikub-game/${roomCode.value}/dm/${id}`;
+
+                        const connectMQTT = () => {
+                            return new Promise((resolve, reject) => {
+                                myId.value = "player-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+                                const client = mqtt.connect(MQTT_BROKERS[currentBrokerIdx], {
+                                    clientId: "rmk-" + myId.value,
+                                    clean: true,
+                                    connectTimeout: 8000,
+                                });
+                                client.on("connect", () => {
+                                    client.subscribe([getTopic(), getDMTopic(myId.value)], { qos: 0 }, (err) => (err ? reject(err) : resolve(client)));
+                                });
+                                client.on("error", (e) => {
+                                    if (currentBrokerIdx < MQTT_BROKERS.length - 1) {
+                                        currentBrokerIdx++;
+                                        client.end(true);
+                                        connectMQTT().then(resolve).catch(reject);
+                                    } else reject(e);
+                                });
+                                client.on("message", (topic, msg) => {
+                                    try {
+                                        const data = JSON.parse(msg.toString());
+                                        if (data._from === myId.value) return;
+                                        handleMQTTMessage(data);
+                                    } catch (e) {}
+                                });
+                                mqttClient = client;
+                            });
+                        };
+
+                        const mqttSend = (data) => mqttClient?.connected && mqttClient.publish(getTopic(), JSON.stringify({ ...data, _from: myId.value }), { qos: 0 });
+                        const mqttSendDM = (targetId, data) => mqttClient?.connected && mqttClient.publish(getDMTopic(targetId), JSON.stringify({ ...data, _from: myId.value }), { qos: 0 });
+
+                        // Lobby Actions
+                        const handleGo = async () => {
+                            if (!nickname.value.trim()) {
+                                showToast("請輸入暱稱");
+                                return;
+                            }
+                            if (mode.value === "solo") {
+                                startSoloGame();
+                                return;
+                            }
+
+                            isConnecting.value = true;
+                            try {
+                                if (mode.value === "host") {
+                                    roomCode.value = String(Math.floor(1000 + Math.random() * 9000));
+                                    await connectMQTT();
+                                    isHost.value = true;
+                                    myIndex.value = 0;
+                                    engine = {
+                                        phase: "waiting",
+                                        players: [{ id: myId.value, name: nickname.value, avatar: selectedAvatar.value, hand: [], hasBrokenIce: false, connected: true, isAI: false }],
+                                        table: [],
+                                        pool: [],
+                                        currentTurn: 0,
+                                    };
+                                    phase.value = "waiting";
+                                    updateLocalState(sanState(0));
+                                } else {
+                                    roomCode.value = roomCodeInput.value.trim();
+                                    if (!/^\d{4}$/.test(roomCode.value)) {
+                                        showToast("請輸入 4 位數房間號碼");
+                                        isConnecting.value = false;
+                                        return;
+                                    }
+                                    await connectMQTT();
+                                    isHost.value = false;
+                                    mqttSend({ type: "join", playerId: myId.value, name: nickname.value, avatar: selectedAvatar.value });
+                                    phase.value = "waiting";
+                                }
+                            } catch (e) {
+                                showToast("連線失敗，請重試");
+                            }
+                            isConnecting.value = false;
+                        };
+
+                        const leaveRoom = () => {
+                            if (isHost.value && !isSoloMode.value) mqttSend({ type: "hostLeft" });
+                            if (mqttClient) mqttClient.end();
+                            location.reload();
+                        };
+
+                        // Game Engine Logic (Host)
+                        const createPool = () => {
+                            const pool = [];
+                            let id = 0;
+                            for (let s = 0; s < 2; s++) for (const c of COLORS) for (let n = 1; n <= 13; n++) pool.push({ id: id++, color: c, number: n });
+                            ["joker", "joker", "double", "double", "colorchange", "colorchange", "mirror", "mirror"].forEach((c) => pool.push({ id: id++, color: c, number: 0 }));
+                            const r = [...pool];
+                            for (let i = r.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [r[i], r[j]] = [r[j], r[i]];
+                            }
+                            return r;
+                        };
+
+                        const saveTurnBackup = () => {
+                            turnBackup = JSON.parse(JSON.stringify({ table: engine.table, hands: engine.players.map((p) => p.hand.map((t) => ({ ...t }))) }));
+                            hasMeldedThisTurn.value = false;
+                            myPlayedTileIds.value = [];
+                        };
+
+                        const startSoloGame = () => {
+                            isSoloMode.value = true;
+                            isHost.value = true;
+                            myId.value = "local";
+                            myIndex.value = 0;
+                            const usedAv = new Set([selectedAvatar.value]),
+                                usedNm = new Set();
+                            engine = {
+                                phase: "playing",
+                                players: [{ id: myId.value, name: nickname.value, avatar: selectedAvatar.value, hand: [], hasBrokenIce: false, connected: true, isAI: false }],
+                                table: [],
+                                pool: createPool(),
+                                currentTurn: 0,
+                            };
+                            for (let i = 0; i < aiCount.value; i++) {
+                                let av;
+                                do {
+                                    av = Math.floor(Math.random() * 8);
+                                } while (usedAv.has(av));
+                                usedAv.add(av);
+                                let nm;
+                                do {
+                                    nm = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
+                                } while (usedNm.has(nm));
+                                usedNm.add(nm);
+                                engine.players.push({ id: "ai-" + i, name: nm, avatar: av, hand: [], hasBrokenIce: false, connected: true, isAI: true });
+                            }
+                            engine.players.forEach((p) => {
+                                for (let i = 0; i < 14; i++) if (engine.pool.length) p.hand.push(engine.pool.pop());
+                            });
+                            saveTurnBackup();
+                            broadcastGS();
+                            startTurnTimer();
+                            phase.value = "playing";
+                        };
+
+                        const startGame = () => {
+                            if (!isHost.value || engine.players.length < 2) return;
+                            engine.phase = "playing";
+                            engine.pool = createPool();
+                            engine.table = [];
+                            engine.currentTurn = 0;
+                            engine.players.forEach((p) => {
+                                p.hand = [];
+                                p.hasBrokenIce = false;
+                                for (let i = 0; i < 14; i++) if (engine.pool.length) p.hand.push(engine.pool.pop());
+                            });
+                            saveTurnBackup();
+                            engine.players.forEach((p, i) => {
+                                if (p.id !== myId.value) mqttSendDM(p.id, { type: "gameStart", targetId: p.id, myIndex: i });
+                            });
+                            broadcastGS();
+                            startTurnTimer();
+                            phase.value = "playing";
+                        };
+
+                        const restartGame = () => {
+                            if (turnTimerObj) clearInterval(turnTimerObj);
+                            engine.phase = "playing";
+                            engine.pool = createPool();
+                            engine.table = [];
+                            engine.currentTurn = 0;
+                            engine.players = engine.players.filter((p) => p.connected || p.isAI);
+                            engine.players.forEach((p) => {
+                                p.hand = [];
+                                p.hasBrokenIce = false;
+                                for (let i = 0; i < 14; i++) if (engine.pool.length) p.hand.push(engine.pool.pop());
+                            });
+                            localHandOrder.value = [];
+                            lastPlayedTileIds.value = [];
+                            borrowedTileIds.value = [];
+                            myPlayedTileIds.value = [];
+                            prevTableTileIds.clear();
+                            saveTurnBackup();
+                            if (!isSoloMode.value)
+                                engine.players.forEach((p, i) => {
+                                    if (p.isAI || p.id === myId.value) return;
+                                    mqttSendDM(p.id, { type: "newGame", targetId: p.id, myIndex: i });
+                                });
+                            myIndex.value = 0;
+                            broadcastGS();
+                            startTurnTimer();
+                            showToast("新的一局開始！");
+                            phase.value = "playing";
+                        };
+
+                        const headerAction = () => {
+                            if (isSoloMode.value || isHost.value) {
+                                if (phase.value === "playing" && confirm("確定結束並開新局嗎？")) restartGame();
+                            } else {
+                                if (confirm("確定離開遊戲嗎？")) {
+                                    mqttSend({ type: "playerLeave", playerId: myId.value });
+                                    showToast("已離開");
+                                    setTimeout(() => location.reload(), 1500);
+                                }
+                            }
+                        };
+
+                        // Data flow
+                        const sanState = (pi) => ({
+                            phase: engine.phase,
+                            poolCount: engine.pool.length,
+                            currentTurn: engine.currentTurn,
+                            myIndex: pi,
+                            table: engine.table,
+                            players: engine.players.map((p, i) => ({
+                                id: p.id,
+                                name: p.name,
+                                avatar: p.avatar,
+                                handCount: p.hand.length,
+                                isAI: p.isAI,
+                                connected: p.connected,
+                                hand: i === pi ? p.hand : undefined,
+                            })),
+                        });
+
+                        const broadcastGS = () => {
+                            engine.players.forEach((p, i) => {
+                                if (p.isAI) return;
+                                if (p.id === myId.value) {
+                                    updateLocalState(sanState(i));
+                                    return;
+                                }
+                                mqttSendDM(p.id, { type: "gameState", targetId: p.id, state: sanState(i) });
+                            });
+                        };
+
+                        const sendTP = (pi, data) => {
+                            const p = engine.players[pi];
+                            if (p.isAI) return;
+                            if (p.id === myId.value) {
+                                if (data.type === "toast") showToast(data.msg);
+                            } else mqttSendDM(p.id, { ...data, targetId: p.id });
+                        };
+
+                        const updateLocalState = (state) => {
+                            phase.value = state.phase;
+                            players.value = state.players;
+                            table.value = state.table;
+                            poolCount.value = state.poolCount;
+                            currentTurn.value = state.currentTurn;
+                            myIndex.value = state.myIndex;
+
+                            if (state.currentTurn !== lastRenderedTurn) {
+                                const prevTurn = lastRenderedTurn;
+                                lastRenderedTurn = state.currentTurn;
+                                myPlayedTileIds.value = [];
+                                if (!isHost.value && !isSoloMode.value) {
+                                    hasMeldedThisTurn.value = false;
+                                    borrowedTileIds.value = [];
+                                    if (state.currentTurn === state.myIndex) {
+                                        turnBackupSnapshot.clear();
+                                        (state.table || []).forEach((s) => (s || []).forEach((t) => turnBackupSnapshot.add(t.id)));
+                                    }
+                                    if (prevTurn >= 0) {
+                                        const newTableIds = new Set();
+                                        (state.table || []).forEach((s) => (s || []).forEach((t) => newTableIds.add(t.id)));
+                                        lastPlayedTileIds.value = [];
+                                        newTableIds.forEach((id) => {
+                                            if (!prevTableTileIds.has(id)) lastPlayedTileIds.value.push(id);
+                                        });
+                                    }
+                                }
+                                prevTableTileIds.clear();
+                                (state.table || []).forEach((s) => (s || []).forEach((t) => prevTableTileIds.add(t.id)));
+                            } else {
+                                if (!isHost.value && !isSoloMode.value) {
+                                    prevTableTileIds.clear();
+                                    (state.table || []).forEach((s) => (s || []).forEach((t) => prevTableTileIds.add(t.id)));
+                                    if (state.currentTurn === state.myIndex && hasMeldedThisTurn.value) {
+                                        myPlayedTileIds.value = [];
+                                        (state.table || []).forEach((s) =>
+                                            (s || []).forEach((t) => {
+                                                if (!turnBackupSnapshot.has(t.id)) myPlayedTileIds.value.push(t.id);
+                                            }),
+                                        );
+                                    }
+                                }
+                                if ((isHost.value || isSoloMode.value) && state.currentTurn === state.myIndex && turnBackup) {
+                                    const oldIds = new Set();
+                                    turnBackup.table.forEach((s) => s.forEach((t) => oldIds.add(t.id)));
+                                    myPlayedTileIds.value = [];
+                                    engine.table.forEach((s) =>
+                                        s.forEach((t) => {
+                                            if (!oldIds.has(t.id)) myPlayedTileIds.value.push(t.id);
+                                        }),
+                                    );
+                                }
+                            }
+
+                            const h = state.players[state.myIndex].hand || [];
+                            if (localHandOrder.value.length > 0 && h.length > 0) {
+                                const oldIds = new Set(localHandOrder.value);
+                                const newTiles = h.filter((t) => !oldIds.has(t.id));
+                                if (newTiles.length > 0) {
+                                    if (newTiles.length === 1 && !lastDrawnTileId.value) lastDrawnTileId.value = newTiles[0].id;
+                                    nextTick(() => {
+                                        if (handContainer.value) handContainer.value.scrollLeft = handContainer.value.scrollWidth;
+                                        if (newTiles.length === 1) setTimeout(() => (lastDrawnTileId.value = null), 2000);
+                                    });
+                                }
+                                localHand.value = h;
+                                localHandOrder.value = displayedHand.value.map((t) => t.id);
+                            } else if (h.length > 0) {
+                                localHand.value = h;
+                                localHandOrder.value = h.map((t) => t.id);
+                            } else {
+                                localHand.value = [];
+                                localHandOrder.value = [];
+                            }
+                        };
+
+                        const handleMQTTMessage = (data) => {
+                            if (isHost.value) {
+                                if (data.type === "join") {
+                                    if (engine.phase !== "waiting") {
+                                        mqttSendDM(data.playerId, { type: "toast", msg: "遊戲已開始" });
+                                        return;
+                                    }
+                                    if (engine.players.some((p) => p.id === data.playerId)) return;
+                                    engine.players.push({ id: data.playerId, name: data.name, avatar: data.avatar, hand: [], hasBrokenIce: false, connected: true, isAI: false });
+                                    updateLocalState(sanState(0));
+                                    mqttSend({ type: "lobbyUpdate", players: engine.players.map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, isAI: p.isAI })) });
+                                } else if (data.type === "gameAction") {
+                                    const pi = engine.players.findIndex((p) => p.id === data.playerId);
+                                    if (pi < 0) return;
+                                    if (data.action === "meld" && data.tileIds)
+                                        data.tileIndices = data.tileIds.map((id) => engine.players[pi].hand.findIndex((t) => t.id === id)).filter((i) => i >= 0);
+                                    if (data.action === "replaceJoker" && data.tileId) data.handTileIndex = engine.players[pi].hand.findIndex((t) => t.id === data.tileId);
+                                    doAction(pi, data);
+                                } else if (data.type === "playerLeave") {
+                                    const pi = engine.players.findIndex((p) => p.id === data.playerId);
+                                    if (pi < 0) return;
+                                    const p = engine.players[pi];
+                                    if (p.hand.length > 0) {
+                                        engine.pool.push(...p.hand);
+                                        p.hand = [];
+                                    }
+                                    p.connected = false;
+                                    if (engine.currentTurn === pi) {
+                                        if (turnBackup) {
+                                            engine.table = JSON.parse(JSON.stringify(turnBackup.table));
+                                            engine.players.forEach((pp, i) => {
+                                                if (i !== pi) pp.hand = turnBackup.hands[i].map((t) => ({ ...t }));
+                                            });
+                                        }
+                                        advanceTurn();
+                                    }
+                                    engine.players.splice(pi, 1);
+                                    if (engine.currentTurn >= engine.players.length) engine.currentTurn = 0;
+                                    myIndex.value = engine.players.findIndex((pp) => pp.id === myId.value);
+                                    showToast(`${p.name} 離開了`);
+                                    if (engine.players.filter((x) => !x.isAI).length === 0 || engine.players.length < 2) {
+                                        showToast("玩家不足");
+                                        engine.phase = "finished";
+                                    }
+                                    saveTurnBackup();
+                                    broadcastGS();
+                                }
+                            } else {
+                                if (data.type === "lobbyUpdate") players.value = data.players;
+                                else if (data.type === "gameState") updateLocalState(data.state);
+                                else if (data.type === "toast") showToast(data.msg);
+                                else if (data.type === "gameStart") {
+                                    myIndex.value = data.myIndex;
+                                    phase.value = "playing";
+                                    startTurnTimer();
+                                } else if (data.type === "newGame") {
+                                    myIndex.value = data.myIndex;
+                                    localHandOrder.value = [];
+                                    lastPlayedTileIds.value = [];
+                                    borrowedTileIds.value = [];
+                                    myPlayedTileIds.value = [];
+                                    hasMeldedThisTurn.value = false;
+                                    phase.value = "playing";
+                                    startTurnTimer();
+                                    showToast("新的一局開始！");
+                                } else if (data.type === "gameOver") {
+                                    phase.value = "finished";
+                                    gameOverData.value = data;
+                                    if (turnTimerObj) clearInterval(turnTimerObj);
+                                } else if (data.type === "hostLeft") {
+                                    if (turnTimerObj) clearInterval(turnTimerObj);
+                                    showToast("房主已離開，即將返回主畫面...");
+                                    setTimeout(() => {
+                                        if (mqttClient) mqttClient.end();
+                                        location.reload();
+                                    }, 2500);
+                                }
+                            }
+                        };
+
+                        // Turn Logic
+                        const advanceTurn = () => {
+                            engine.currentTurn = (engine.currentTurn + 1) % engine.players.length;
+                            saveTurnBackup();
+                            resetTurnTimer();
+                            if (engine.pool.length === 0) {
+                                if (isHost.value && engine.players[engine.currentTurn].isAI && engine.phase === "playing") setTimeout(() => runAI(engine.currentTurn), 800);
+                            } else if (isHost.value && engine.players[engine.currentTurn].isAI && engine.phase === "playing") setTimeout(() => runAI(engine.currentTurn), 800);
+                        };
+
+                        const startTurnTimer = () => {
+                            turnTimeLeft.value = TURN_TIME;
+                            if (turnTimerObj) clearInterval(turnTimerObj);
+                            turnTimerObj = setInterval(() => {
+                                if (isCurrentPlayerAI.value) return;
+                                turnTimeLeft.value--;
+                                if (turnTimeLeft.value <= 0 && isHost.value) {
+                                    const ct = engine.currentTurn;
+                                    if (hasMeldedThisTurn.value) {
+                                        sendTP(ct, { type: "toast", msg: "超時！還原並抽1張" });
+                                        processUndo(ct);
+                                        if (engine.pool.length) engine.players[ct].hand.push(engine.pool.pop());
+                                        advanceTurn();
+                                        broadcastGS();
+                                    } else {
+                                        processDraw(ct);
+                                    }
+                                }
+                            }, 1000);
+                        };
+                        const resetTurnTimer = () => (turnTimeLeft.value = TURN_TIME);
+
+                        const doAction = (pi, data) => {
+                            if (data.action === "meld") processMeld(pi, data.tileIndices, data.targetSetIndex);
+                            else if (data.action === "draw") processDraw(pi);
+                            else if (data.action === "endTurn") processEndTurn(pi);
+                            else if (data.action === "undo") processUndo(pi);
+                            else if (data.action === "splitTake") processSplitTake(pi, data.setIndex, data.tilePositions);
+                            else if (data.action === "replaceJoker") processReplaceJoker(pi, data.handTileIndex, data.setIndex, data.jokerPos);
+                        };
+
+                        const processMeld = (pi, indices, tsi) => {
+                            if (engine.currentTurn !== pi) return;
+                            const p = engine.players[pi],
+                                tiles = indices.map((i) => p.hand[i]).filter(Boolean);
+                            if (!tiles.length) return;
+                            if (tsi !== undefined && tsi >= 0 && tsi < engine.table.length) engine.table[tsi].push(...tiles);
+                            else engine.table.push([...tiles]);
+                            indices.sort((a, b) => b - a).forEach((i) => p.hand.splice(i, 1));
+                            if (p.id === myId.value) hasMeldedThisTurn.value = true;
+                            broadcastGS();
+                            if (p.hand.length === 0) endGameWithWinner(pi);
+                        };
+
+                        const processSplitTake = (pi, setIndex, pos) => {
+                            if (engine.currentTurn !== pi || !engine.players[pi].hasBrokenIce) return;
+                            const set = engine.table[setIndex];
+                            if (!set) return;
+                            const taken = pos.map((p) => set[p]).filter(Boolean),
+                                remaining = set.filter((_, i) => !pos.includes(i));
+                            if (remaining.length) engine.table[setIndex] = remaining;
+                            else engine.table.splice(setIndex, 1);
+                            if (engine.players[pi].id === myId.value) taken.forEach((t) => borrowedTileIds.value.push(t.id));
+                            engine.players[pi].hand.push(...taken);
+                            if (engine.players[pi].id === myId.value) hasMeldedThisTurn.value = true;
+                            broadcastGS();
+                        };
+
+                        const processReplaceJoker = (pi, hti, si, ti) => {
+                            if (engine.currentTurn !== pi || !engine.players[pi].hasBrokenIce) return;
+                            const p = engine.players[pi],
+                                set = engine.table[si];
+                            if (!set || !set[ti]) return;
+                            // 鏡射牌、雙人百搭、變色百搭均不可被替換，僅紅色百搭（joker）可換出
+                            if (set[ti].color !== "joker") {
+                                sendTP(pi, { type: "toast", msg: "只有普通百搭（紅）可被替換" });
+                                return;
+                            }
+                            const ht = p.hand[hti],
+                                jt = set[ti],
+                                testSet = [...set];
+                            testSet[ti] = ht;
+                            if (!valSet(testSet)) {
+                                sendTP(pi, { type: "toast", msg: "無法替換" });
+                                return;
+                            }
+                            set[ti] = ht;
+                            p.hand.splice(hti, 1);
+                            p.hand.push(jt);
+                            if (p.id === myId.value) hasMeldedThisTurn.value = true;
+                            broadcastGS();
+                        };
+
+                        const processDraw = (pi) => {
+                            if (engine.currentTurn !== pi) return;
+                            if (engine.players[pi].id === myId.value && hasMeldedThisTurn.value) return;
+                            if (!engine.pool.length) {
+                                checkPoolExhausted();
+                                return;
+                            }
+                            const d = engine.pool.pop();
+                            if (engine.players[pi].id === myId.value) lastDrawnTileId.value = d.id;
+                            engine.players[pi].hand.push(d);
+                            advanceTurn();
+                            broadcastGS();
+                        };
+
+                        const processEndTurn = (pi) => {
+                            if (engine.currentTurn !== pi) return;
+                            const isMe = engine.players[pi].id === myId.value;
+                            const hasMelded = isMe ? hasMeldedThisTurn.value : true; // AI always flags true if calling end
+                            if (hasMelded) {
+                                if (isMe && borrowedTileIds.value.length > 0) {
+                                    const still = borrowedTileIds.value.filter((id) => engine.players[pi].hand.some((t) => t.id === id));
+                                    if (still.length > 0) {
+                                        sendTP(pi, { type: "toast", msg: "取回的牌尚未歸還" });
+                                        return;
+                                    }
+                                }
+                                if (!engine.players[pi].hasBrokenIce) {
+                                    const oldIds = new Set();
+                                    turnBackup.table.forEach((s) => s.forEach((t) => oldIds.add(t.id)));
+                                    const nt = [];
+                                    engine.table.forEach((s) =>
+                                        s.forEach((t) => {
+                                            if (!oldIds.has(t.id)) nt.push(t);
+                                        }),
+                                    );
+                                    const sum = nt.reduce((s, t) => s + (t.color === "joker" ? 0 : t.number), 0);
+                                    if (sum < 30) {
+                                        sendTP(pi, { type: "toast", msg: `破冰需 ≥30 點（目前 ${sum}）` });
+                                        return;
+                                    }
+                                    const bhi = new Set(turnBackup.hands[pi].map((t) => t.id));
+                                    for (const t of nt)
+                                        if (!bhi.has(t.id)) {
+                                            sendTP(pi, { type: "toast", msg: "破冰限用手牌" });
+                                            return;
+                                        }
+                                    engine.players[pi].hasBrokenIce = true;
+                                }
+                                if (!valAll(engine.table)) {
+                                    sendTP(pi, { type: "toast", msg: "桌面有無效牌組，罰抽 3 張" });
+                                    applyPenalty(pi);
+                                    return;
+                                }
+                                autoSortTableSets(engine.table);
+                                computeLastPlayedTiles();
+                            }
+                            borrowedTileIds.value = [];
+                            advanceTurn();
+                            broadcastGS();
+                        };
+
+                        const applyPenalty = (pi) => {
+                            engine.table = JSON.parse(JSON.stringify(turnBackup.table));
+                            engine.players.forEach((p, i) => (p.hand = turnBackup.hands[i].map((t) => ({ ...t }))));
+                            for (let i = 0; i < 3; i++) if (engine.pool.length) engine.players[pi].hand.push(engine.pool.pop());
+                            if (engine.players[pi].id === myId.value) hasMeldedThisTurn.value = false;
+                            advanceTurn();
+                            broadcastGS();
+                        };
+
+                        const processUndo = (pi) => {
+                            if (engine.currentTurn !== pi || !turnBackup) return;
+                            engine.table = JSON.parse(JSON.stringify(turnBackup.table));
+                            engine.players.forEach((p, i) => (p.hand = turnBackup.hands[i].map((t) => ({ ...t }))));
+                            if (engine.players[pi].id === myId.value) {
+                                hasMeldedThisTurn.value = false;
+                                borrowedTileIds.value = [];
+                            }
+                            broadcastGS();
+                            sendTP(pi, { type: "toast", msg: "已撤銷" });
+                        };
+
+                        const computeLastPlayedTiles = () => {
+                            const oldIds = new Set();
+                            turnBackup.table.forEach((s) => s.forEach((t) => oldIds.add(t.id)));
+                            lastPlayedTileIds.value = [];
+                            engine.table.forEach((s) =>
+                                s.forEach((t) => {
+                                    if (!oldIds.has(t.id)) lastPlayedTileIds.value.push(t.id);
+                                }),
+                            );
+                        };
+
+                        let noPlayTurns = 0;
+                        const checkPoolExhausted = () => {
+                            if (engine.pool.length === 0 && isHost.value && engine.players[engine.currentTurn].isAI) setTimeout(() => runAI(engine.currentTurn), 800);
+                        };
+
+                        const endGameWithWinner = (wi) => {
+                            engine.phase = "finished";
+                            if (turnTimerObj) clearInterval(turnTimerObj);
+                            const w = engine.players[wi],
+                                losersTotal = engine.players.reduce((s, p, i) => (i === wi ? s : s + handScore(p.hand)), 0);
+                            const scores = engine.players.map((p, i) => ({ name: p.name, avatar: p.avatar, points: i === wi ? losersTotal : -handScore(p.hand) }));
+                            const data = { type: "gameOver", winnerIndex: wi, winnerName: w.name, winnerAvatar: w.avatar, scores, isPoolExhaust: false };
+                            if (!isSoloMode.value) mqttSend(data);
+                            gameOverData.value = data;
+                            phase.value = "finished";
+                        };
+
+                        const endGamePoolExhausted = () => {
+                            engine.phase = "finished";
+                            if (turnTimerObj) clearInterval(turnTimerObj);
+                            let minScore = Infinity,
+                                wi = 0;
+                            engine.players.forEach((p, i) => {
+                                const s = handScore(p.hand);
+                                if (s < minScore) {
+                                    minScore = s;
+                                    wi = i;
+                                }
+                            });
+                            const scores = engine.players.map((p, i) => {
+                                if (i === wi) return { name: p.name, avatar: p.avatar, points: engine.players.reduce((s, pp, j) => (j === wi ? s : s + (handScore(pp.hand) - minScore)), 0) };
+                                return { name: p.name, avatar: p.avatar, points: -(handScore(p.hand) - minScore) };
+                            });
+                            const data = { type: "gameOver", winnerIndex: wi, winnerName: engine.players[wi].name, winnerAvatar: engine.players[wi].avatar, scores, isPoolExhaust: true };
+                            if (!isSoloMode.value) mqttSend(data);
+                            gameOverData.value = data;
+                            phase.value = "finished";
+                        };
+
+                        // AI Logic
+                        const runAI = (pi) => {
+                            if (engine.phase !== "playing" || engine.currentTurn !== pi) return;
+                            aiThinking.value = true;
+                            setTimeout(
+                                () => {
+                                    aiThinking.value = false;
+                                    if (engine.phase !== "playing" || engine.currentTurn !== pi) return;
+                                    if (aiTryMeld(pi)) {
+                                        if (engine.players[pi].hand.length === 0) {
+                                            endGameWithWinner(pi);
+                                            return;
+                                        }
+                                        if (aiDiff.value === "hard") {
+                                            let ex = true;
+                                            while (ex && engine.players[pi].hand.length > 0) {
+                                                ex = aiTryMeld(pi);
+                                                if (ex && engine.players[pi].hand.length === 0) {
+                                                    endGameWithWinner(pi);
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                        if (valAll(engine.table)) {
+                                            noPlayTurns = 0;
+                                            processEndTurn(pi);
+                                        } else {
+                                            processUndo(pi);
+                                            aiDraw(pi);
+                                        }
+                                    } else aiDraw(pi);
+                                },
+                                1000 + Math.random() * 1000,
+                            );
+                        };
+                        const aiDraw = (pi) => {
+                            if (engine.pool.length > 0) {
+                                engine.players[pi].hand.push(engine.pool.pop());
+                                noPlayTurns = 0;
+                            } else {
+                                noPlayTurns++;
+                                if (noPlayTurns >= engine.players.length) {
+                                    endGamePoolExhausted();
+                                    return;
+                                }
+                            }
+                            advanceTurn();
+                            broadcastGS();
+                        };
+                        const aiTryMeld = (pi) => {
+                            const p = engine.players[pi],
+                                h = p.hand;
+                            if (!h.length) return false;
+                            const th = aiDiff.value === "easy" ? 0.4 : aiDiff.value === "normal" ? 0.7 : 1;
+                            if (Math.random() > th + 0.3) return false;
+                            const byN = {};
+                            h.forEach((t, i) => {
+                                if (!isJokerType(t)) {
+                                    if (!byN[t.number]) byN[t.number] = [];
+                                    byN[t.number].push({ t, i });
+                                }
+                            });
+                            for (const num in byN) {
+                                const cs = new Set(),
+                                    cho = [];
+                                for (const x of byN[num]) {
+                                    if (!cs.has(x.t.color)) {
+                                        cs.add(x.t.color);
+                                        cho.push(x);
+                                    }
+                                    if (cho.length >= 4) break;
+                                }
+                                if (cho.length >= 3) {
+                                    if (!p.hasBrokenIce && cho.reduce((s, c) => s + c.t.number, 0) < 30) continue;
+                                    processMeld(
+                                        pi,
+                                        cho.map((c) => c.i),
+                                    );
+                                    return true;
+                                }
+                            }
+                            const byC = {};
+                            h.forEach((t, i) => {
+                                if (!isJokerType(t)) {
+                                    if (!byC[t.color]) byC[t.color] = [];
+                                    byC[t.color].push({ t, i });
+                                }
+                            });
+                            for (const col in byC) {
+                                const ts = byC[col].sort((a, b) => a.t.number - b.t.number),
+                                    u = [];
+                                const s = new Set();
+                                for (const x of ts) {
+                                    if (!s.has(x.t.number)) {
+                                        s.add(x.t.number);
+                                        u.push(x);
+                                    }
+                                }
+                                for (let st = 0; st < u.length - 2; st++) {
+                                    const r = [u[st]];
+                                    for (let j = st + 1; j < u.length; j++) {
+                                        if (u[j].t.number === r[r.length - 1].t.number + 1) r.push(u[j]);
+                                        else break;
+                                    }
+                                    if (r.length >= 3) {
+                                        if (!p.hasBrokenIce && r.reduce((s, c) => s + c.t.number, 0) < 30) continue;
+                                        processMeld(
+                                            pi,
+                                            r.map((x) => x.i),
+                                        );
+                                        return true;
+                                    }
+                                }
+                            }
+                            if (aiDiff.value !== "easy" && engine.table.length > 0 && p.hasBrokenIce) {
+                                for (let si = 0; si < engine.table.length; si++) {
+                                    const set = engine.table[si];
+                                    for (let hi = h.length - 1; hi >= 0; hi--) {
+                                        if (valSet([...set, h[hi]])) {
+                                            processMeld(pi, [hi], si);
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                            return false;
+                        };
+
+                        // UI Interactivity
+                        const toggleSelectHandTile = (i) => {
+                            if (handDrag.moved) return;
+                            const idx = selectedHandTiles.value.indexOf(i);
+                            if (idx >= 0) selectedHandTiles.value.splice(idx, 1);
+                            else selectedHandTiles.value.push(i);
+                        };
+                        const isSelectedTableTile = (si, ti) => selectedTableTiles.value.some((x) => x.si === si && x.ti === ti);
+                        const selectTableTile = (si, ti) => {
+                            const idx = selectedTableTiles.value.findIndex((x) => x.si === si && x.ti === ti);
+                            if (idx >= 0) selectedTableTiles.value.splice(idx, 1);
+                            else {
+                                selectedTableTiles.value.push({ si, ti });
+                                selectedTableSet.value = si;
+                            }
+                        };
+                        const clearSel = () => {
+                            selectedHandTiles.value = [];
+                            selectedTableTiles.value = [];
+                            selectedTableSet.value = -1;
+                        };
+
+                        const getSelectedIds = () => selectedHandTiles.value.map((i) => displayedHand.value[i]?.id).filter(Boolean);
+                        const resolveIds = (ids) => ids.map((id) => engine.players[myIndex.value].hand.findIndex((t) => t.id === id)).filter((i) => i >= 0);
+
+                        const sendAction = (a) => {
+                            if (isHost.value || isSoloMode.value) doAction(myIndex.value, a);
+                            else mqttSend({ type: "gameAction", playerId: myId.value, ...a });
+                        };
+
+                        const playSelected = () => {
+                            if (!selectedHandTiles.value.length) {
+                                showToast("請先選取牌");
+                                return;
+                            }
+                            const ids = getSelectedIds();
+                            clearSel();
+                            if (isHost.value) sendAction({ action: "meld", tileIndices: resolveIds(ids) });
+                            else {
+                                hasMeldedThisTurn.value = true;
+                                mqttSend({ type: "gameAction", playerId: myId.value, action: "meld", tileIds: ids });
+                            }
+                        };
+                        const addToExistingSet = () => {
+                            if (!selectedHandTiles.value.length || selectedTableSet.value < 0) {
+                                showToast("請選取手牌並點擊桌面牌組");
+                                return;
+                            }
+                            const ids = getSelectedIds(),
+                                tsi = selectedTableSet.value;
+                            clearSel();
+                            if (isHost.value) sendAction({ action: "meld", tileIndices: resolveIds(ids), targetSetIndex: tsi });
+                            else {
+                                hasMeldedThisTurn.value = true;
+                                mqttSend({ type: "gameAction", playerId: myId.value, action: "meld", tileIds: ids, targetSetIndex: tsi });
+                            }
+                        };
+                        const splitFromSet = () => {
+                            if (!selectedTableTiles.value.length) {
+                                showToast("請點擊要取出的桌面牌");
+                                return;
+                            }
+                            const si = selectedTableTiles.value[0].si,
+                                pos = selectedTableTiles.value.filter((x) => x.si === si).map((x) => x.ti);
+                            clearSel();
+                            if (isHost.value) sendAction({ action: "splitTake", setIndex: si, tilePositions: pos });
+                            else {
+                                hasMeldedThisTurn.value = true;
+                                mqttSend({ type: "gameAction", playerId: myId.value, action: "splitTake", setIndex: si, tilePositions: pos });
+                            }
+                        };
+                        const replaceJoker = () => {
+                            if (selectedHandTiles.value.length !== 1 || !selectedTableTiles.value.length) {
+                                showToast("請選 1 張手牌與桌面 1 張鬼牌");
+                                return;
+                            }
+                            const jt = selectedTableTiles.value[0],
+                                ids = getSelectedIds();
+                            clearSel();
+                            if (isHost.value) sendAction({ action: "replaceJoker", handTileIndex: resolveIds(ids)[0], setIndex: jt.si, jokerPos: jt.ti });
+                            else {
+                                hasMeldedThisTurn.value = true;
+                                mqttSend({ type: "gameAction", playerId: myId.value, action: "replaceJoker", tileId: ids[0], setIndex: jt.si, jokerPos: jt.ti });
+                            }
+                        };
+                        const mainBtnClick = () => {
+                            if (hasMeldedThisTurn.value) {
+                                clearSel();
+                                sendAction({ action: "endTurn" });
+                            } else {
+                                clearSel();
+                                sendAction({ action: "draw" });
+                            }
+                        };
+                        const undoTurn = () => {
+                            clearSel();
+                            borrowedTileIds.value = [];
+                            hasMeldedThisTurn.value = false;
+                            sendAction({ action: "undo" });
+                        };
+                        const sortHand = (by) => {
+                            const h = [...displayedHand.value];
+                            h.sort((a, b) => {
+                                if (a.color === "joker") return 1;
+                                if (b.color === "joker") return -1;
+                                return by === "color"
+                                    ? COLORS.indexOf(a.color) - COLORS.indexOf(b.color) || a.number - b.number
+                                    : a.number - b.number || COLORS.indexOf(a.color) - COLORS.indexOf(b.color);
+                            });
+                            localHandOrder.value = h.map((t) => t.id);
+                            clearSel();
+                        };
+
+                        const wheelHand = (e) => {
+                            if (handContainer.value) handContainer.value.scrollLeft += e.deltaY || e.deltaX;
+                        };
+
+                        const handDrag = { active: false, startX: 0, scrollLeft: 0, moved: false };
+                        const handMouseDown = (e) => {
+                            if (e.button !== 0 || !handContainer.value) return;
+                            handDrag.active = true;
+                            handDrag.startX = e.pageX;
+                            handDrag.scrollLeft = handContainer.value.scrollLeft;
+                            handDrag.moved = false;
+                            handContainer.value.style.cursor = "grabbing";
+                        };
+                        const handMouseMove = (e) => {
+                            if (!handDrag.active || !handContainer.value) return;
+                            const dx = e.pageX - handDrag.startX;
+                            if (Math.abs(dx) > 4) handDrag.moved = true;
+                            handContainer.value.scrollLeft = handDrag.scrollLeft - dx;
+                        };
+                        const handMouseUp = () => {
+                            handDrag.active = false;
+                            if (handContainer.value) handContainer.value.style.cursor = "";
+                        };
+
+                        return {
+                            mode,
+                            phase,
+                            nickname,
+                            roomCodeInput,
+                            aiCount,
+                            aiDiff,
+                            avatars,
+                            selectedAvatar,
+                            showRules,
+                            toastMsg,
+                            aiThinking,
+                            isConnecting,
+                            myId,
+                            roomCode,
+                            isHost,
+                            isSoloMode,
+                            players,
+                            table,
+                            poolCount,
+                            currentTurn,
+                            myIndex,
+                            gameOverData,
+                            isMyTurn,
+                            isCurrentPlayerAI,
+                            currentPlayerInfo,
+                            opponents,
+                            displayedHand,
+                            timerWidth,
+                            timerColor,
+                            selectedHandTiles,
+                            selectedTableTiles,
+                            selectedTableSet,
+                            borrowedTileIds,
+                            lastPlayedTileIds,
+                            myPlayedTileIds,
+                            lastDrawnTileId,
+                            hasMeldedThisTurn,
+                            handContainer,
+                            JOKER_SVGS,
+                            handleGo,
+                            leaveRoom,
+                            startGame,
+                            headerAction,
+                            restartGame,
+                            textColorClass,
+                            tableTileClasses,
+                            valSet,
+                            toggleSelectHandTile,
+                            isSelectedTableTile,
+                            selectTableTile,
+                            playSelected,
+                            addToExistingSet,
+                            splitFromSet,
+                            replaceJoker,
+                            mainBtnClick,
+                            undoTurn,
+                            sortHand,
+                            wheelHand,
+                            handMouseDown,
+                            handMouseMove,
+                            handMouseUp,
+                        };
+                    },
+                }).mount("#app");
+            }); // end DOMContentLoaded
+        </script>
+    </body>
 </html>
