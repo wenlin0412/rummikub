@@ -705,6 +705,9 @@
                 function isJokerType(t) {
                     return t.color === "joker" || t.color === "double" || t.color === "colorchange" || t.color === "mirror";
                 }
+                function isNumberTile(t) {
+                    return !isJokerType(t);
+                }
                 function tileScore(t) {
                     if (t.color === "mirror") return 0;
                     if (isJokerType(t)) return 30;
@@ -716,6 +719,119 @@
                 function valAll(table) {
                     return table.every((s) => valSet(s));
                 }
+
+                function hasSameColor(tiles) {
+                    if (!tiles.length) return true;
+                    const c = tiles[0].color;
+                    return tiles.every((t) => t.color === c);
+                }
+
+                function hasDuplicateNumbers(tiles) {
+                    const nums = tiles.map((t) => t.number);
+                    return new Set(nums).size !== nums.length;
+                }
+
+                function buildRunGapPlan(fixedNums, start, len, regJokers, dblJokers) {
+                    const end = start + len - 1;
+                    if (end > 13 || start < 1) return null;
+
+                    const fixed = new Set(fixedNums);
+                    for (const n of fixed) if (n < start || n > end) return null;
+
+                    const gaps = [];
+                    for (let n = start; n <= end; n++) if (!fixed.has(n)) gaps.push(n);
+                    if (gaps.length !== regJokers + dblJokers * 2) return null;
+
+                    const memo = new Map();
+                    const dfs = (remainRegs, remainDbls, remainArr) => {
+                        const key = `${remainRegs}|${remainDbls}|${remainArr.join(",")}`;
+                        if (memo.has(key)) return memo.get(key);
+                        if (!remainArr.length) {
+                            const done = remainRegs === 0 && remainDbls === 0 ? [] : null;
+                            memo.set(key, done);
+                            return done;
+                        }
+
+                        const cur = remainArr[0];
+                        if (remainRegs > 0) {
+                            const plan = dfs(remainRegs - 1, remainDbls, remainArr.slice(1));
+                            if (plan) {
+                                const withReg = [[cur, "joker"], ...plan];
+                                memo.set(key, withReg);
+                                return withReg;
+                            }
+                        }
+
+                        if (remainDbls > 0 && remainArr[1] === cur + 1) {
+                            const plan = dfs(remainRegs, remainDbls - 1, remainArr.slice(2));
+                            if (plan) {
+                                const withDbl = [[cur, "doubleHead"], [cur + 1, "doubleTail"], ...plan];
+                                memo.set(key, withDbl);
+                                return withDbl;
+                            }
+                        }
+
+                        memo.set(key, null);
+                        return null;
+                    };
+
+                    const solved = dfs(regJokers, dblJokers, gaps);
+                    if (!solved) return null;
+                    return new Map(solved);
+                }
+
+                function canFillRunSlots(fixedNums, start, len, regJokers, dblJokers) {
+                    return !!buildRunGapPlan(fixedNums, start, len, regJokers, dblJokers);
+                }
+
+                function normalizeRunSet(set) {
+                    const numberTiles = set.filter((t) => isNumberTile(t));
+                    const regJokers = set.filter((t) => t.color === "joker");
+                    const dblJokers = set.filter((t) => t.color === "double");
+                    if (!numberTiles.length) return [...set];
+
+                    const fixedNums = numberTiles.map((t) => t.number);
+                    const totalSlots = numberTiles.length + regJokers.length + dblJokers.length * 2;
+                    const maxStart = 14 - totalSlots;
+
+                    for (let st = 1; st <= maxStart; st++) {
+                        const gapPlan = buildRunGapPlan(fixedNums, st, totalSlots, regJokers.length, dblJokers.length);
+                        if (!gapPlan) continue;
+
+                        const numByValue = new Map(numberTiles.map((t) => [t.number, t]));
+                        const arranged = [];
+                        let regIdx = 0;
+                        let dblIdx = 0;
+
+                        for (let n = st; n < st + totalSlots; n++) {
+                            if (numByValue.has(n)) {
+                                arranged.push(numByValue.get(n));
+                                continue;
+                            }
+                            const marker = gapPlan.get(n);
+                            if (marker === "joker") {
+                                arranged.push(regJokers[regIdx++]);
+                            } else if (marker === "doubleHead") {
+                                arranged.push(dblJokers[dblIdx++]);
+                            } else if (marker === "doubleTail") {
+                                // 這格由前一張雙人百搭覆蓋，無需新增實體牌
+                                continue;
+                            } else {
+                                return [...set];
+                            }
+                        }
+
+                        if (arranged.length === set.length) return arranged;
+                    }
+
+                    return [...set].sort((a, b) => {
+                        if (isJokerType(a) && !isJokerType(b)) return 1;
+                        if (!isJokerType(a) && isJokerType(b)) return -1;
+                        if (isJokerType(a) && isJokerType(b)) return 0;
+                        return a.number - b.number;
+                    });
+                }
+
                 // 若牌組含鏡射牌，自動將其移至正中間位置（奇數長度才合法）
                 function normalizeMirrorSet(set) {
                     const mirrorIdx = set.findIndex((t) => t.color === "mirror");
@@ -728,14 +844,42 @@
                     arr.splice(center, 0, set[mirrorIdx]);
                     return arr;
                 }
-                function valSet(set) {
-                    if (set.length < 3) return false;
-                    if (set.some((t) => t.color === "mirror")) {
-                        if (set.length % 2 === 0) return false;
-                        const norm = normalizeMirrorSet(set);
-                        return isGroupMirror(norm) || isRunMirror(norm);
+
+                function normalizeSetLayout(set) {
+                    if (!set || set.length < 3) return set;
+                    if (set.some((t) => t.color === "mirror")) return normalizeMirrorSet([...set]);
+
+                    if (set.some((t) => t.color === "colorchange")) return [...set];
+
+                    if (isGroupTwist(set)) {
+                        return [...set].sort((a, b) => {
+                            if (isJokerType(a)) return 1;
+                            if (isJokerType(b)) return -1;
+                            return COLORS.indexOf(a.color) - COLORS.indexOf(b.color);
+                        });
                     }
-                    return isGroupTwist(set) || isRunTwist(set);
+
+                    if (isRunTwist(set)) {
+                        return normalizeRunSet(set);
+                    }
+
+                    return [...set];
+                }
+
+                const SetValidationEngine = {
+                    validate(set) {
+                        if (!Array.isArray(set) || set.length < 3) return false;
+                        if (set.some((t) => t.color === "mirror")) {
+                            if (set.length % 2 === 0) return false;
+                            const norm = normalizeMirrorSet(set);
+                            return isGroupMirror(norm) || isRunMirror(norm);
+                        }
+                        return isGroupTwist(set) || isRunTwist(set);
+                    },
+                };
+
+                function valSet(set) {
+                    return SetValidationEngine.validate(set);
                 }
 
                 function isGroupTwist(set) {
@@ -761,39 +905,18 @@
                 function isRunTwist(set) {
                     if (set.some((t) => t.color === "mirror")) return isRunMirror(set);
                     if (set.some((t) => t.color === "colorchange")) return isRunColorChange(set);
-                    const nj = set.filter((t) => !isJokerType(t));
-                    const totalSlots = set.reduce((s, t) => s + (t.color === "double" ? 2 : 1), 0);
+                    const nj = set.filter((t) => isNumberTile(t));
+                    const regJokers = set.filter((t) => t.color === "joker").length;
+                    const dblJokers = set.filter((t) => t.color === "double").length;
+                    const totalSlots = nj.length + regJokers + dblJokers * 2;
                     if (totalSlots < 3 || totalSlots > 13) return false;
                     if (!nj.length) return true;
-                    const col = nj[0].color;
-                    for (const t of nj) if (t.color !== col) return false;
+                    if (!hasSameColor(nj)) return false;
+                    if (hasDuplicateNumbers(nj)) return false;
+
+                    const fixedNums = nj.map((t) => t.number);
                     const maxStart = 14 - totalSlots;
-                    for (let st = 1; st <= maxStart; st++) {
-                        let expected = st,
-                            ok = true;
-                        for (const t of set) {
-                            if (t.color === "double") {
-                                if (expected + 1 > 13) {
-                                    ok = false;
-                                    break;
-                                }
-                                expected += 2;
-                            } else if (t.color === "joker") {
-                                if (expected > 13) {
-                                    ok = false;
-                                    break;
-                                }
-                                expected += 1;
-                            } else {
-                                if (expected > 13 || t.number !== expected) {
-                                    ok = false;
-                                    break;
-                                }
-                                expected += 1;
-                            }
-                        }
-                        if (ok) return true;
-                    }
+                    for (let st = 1; st <= maxStart; st++) if (canFillRunSlots(fixedNums, st, totalSlots, regJokers, dblJokers)) return true;
                     return false;
                 }
 
@@ -858,7 +981,7 @@
                     const left = set.slice(0, mi),
                         right = set.slice(mi + 1);
                     if (left.length === 0 || right.length === 0 || left.length !== right.length) return false;
-                    const allNJ = [...left, ...right].filter((t) => !isJokerType(t));
+                    const allNJ = [...left, ...right].filter((t) => isNumberTile(t));
                     if (!allNJ.length) return set.length >= 3;
                     const num = allNJ[0].number;
                     for (const t of allNJ) if (t.number !== num) return false;
@@ -878,56 +1001,43 @@
                     const left = set.slice(0, mi),
                         right = set.slice(mi + 1);
                     if (left.length === 0 || right.length === 0 || left.length !== right.length) return false;
-                    const allNJ = [...left, ...right].filter((t) => !isJokerType(t));
+                    const allNJ = [...left, ...right].filter((t) => isNumberTile(t));
                     if (!allNJ.length) return set.length >= 3;
-                    const col = allNJ[0].color;
-                    for (const t of allNJ) if (t.color !== col) return false;
-                    const lnums = left.map((t) => (isJokerType(t) ? null : t.number)),
-                        rnums = right.map((t) => (isJokerType(t) ? null : t.number));
-                    for (let i = 0; i < left.length; i++) {
-                        const li = lnums[i],
-                            ri = rnums[right.length - 1 - i];
-                        if (li !== null && ri !== null && li !== ri) return false;
+                    if (!hasSameColor(allNJ)) return false;
+
+                    const pairCount = left.length;
+                    const pairFixedNums = new Array(pairCount).fill(null);
+
+                    for (let i = 0; i < pairCount; i++) {
+                        const lt = left[i];
+                        const rt = right[pairCount - 1 - i];
+                        const ln = isNumberTile(lt) ? lt.number : null;
+                        const rn = isNumberTile(rt) ? rt.number : null;
+                        if (ln !== null && rn !== null && ln !== rn) return false;
+                        pairFixedNums[i] = ln !== null ? ln : rn;
                     }
-                    const lreal = lnums.filter((n) => n !== null);
-                    if (lreal.length >= 2) {
-                        const sorted = [...lreal].sort((a, b) => a - b);
-                        for (let i = 1; i < sorted.length; i++) if (sorted[i] !== sorted[i - 1] + 1) return false;
+
+                    const maxStart = 14 - pairCount;
+                    for (let st = 1; st <= maxStart; st++) {
+                        let okInc = true;
+                        let okDec = true;
+                        for (let i = 0; i < pairCount; i++) {
+                            const fixed = pairFixedNums[i];
+                            if (fixed === null) continue;
+                            const incVal = st + i;
+                            const decVal = st + (pairCount - 1 - i);
+                            if (fixed !== incVal) okInc = false;
+                            if (fixed !== decVal) okDec = false;
+                            if (!okInc && !okDec) break;
+                        }
+                        if (okInc || okDec) return true;
                     }
-                    for (const n of [...lreal, ...rnums.filter((n) => n !== null)]) if (n < 1 || n > 13) return false;
-                    return set.length >= 3;
+                    return false;
                 }
 
                 function autoSortTableSets(table) {
                     table.forEach((set, i) => {
-                        if (set.some((t) => t.color === "mirror" || t.color === "colorchange")) return;
-                        if (isRunTwist(set)) {
-                            const nj = set.filter((t) => !isJokerType(t)).sort((a, b) => a.number - b.number),
-                                jks = set.filter((t) => isJokerType(t));
-                            if (!nj.length) return;
-                            let start = nj[0].number,
-                                totalLen = nj.length + jks.reduce((s, t) => s + (t.color === "double" ? 2 : 1), 0);
-                            const sorted = [],
-                                used = [...nj];
-                            let ji = 0;
-                            for (let n = start; n < start + totalLen; n++) {
-                                const idx = used.findIndex((t) => t.number === n);
-                                if (idx >= 0) {
-                                    sorted.push(used[idx]);
-                                    used.splice(idx, 1);
-                                } else if (ji < jks.length) {
-                                    sorted.push(jks[ji++]);
-                                    if (jks[ji - 1] && jks[ji - 1].color === "double") n++;
-                                }
-                            }
-                            if (sorted.length === set.length) table[i] = sorted;
-                        } else if (isGroupTwist(set)) {
-                            set.sort((a, b) => {
-                                if (isJokerType(a)) return 1;
-                                if (isJokerType(b)) return -1;
-                                return COLORS.indexOf(a.color) - COLORS.indexOf(b.color);
-                            });
-                        }
+                        table[i] = normalizeSetLayout(set);
                     });
                 }
 
@@ -1532,6 +1642,7 @@
                             const d = engine.pool.pop();
                             if (engine.players[pi].id === myId.value) lastDrawnTileId.value = d.id;
                             engine.players[pi].hand.push(d);
+                            autoSortTableSets(engine.table);
                             advanceTurn();
                             broadcastGS();
                         };
@@ -1570,14 +1681,15 @@
                                         }
                                     engine.players[pi].hasBrokenIce = true;
                                 }
+                                autoSortTableSets(engine.table);
                                 if (!valAll(engine.table)) {
                                     sendTP(pi, { type: "toast", msg: "桌面有無效牌組，罰抽 3 張" });
                                     applyPenalty(pi);
                                     return;
                                 }
-                                autoSortTableSets(engine.table);
                                 computeLastPlayedTiles();
                             }
+                            autoSortTableSets(engine.table);
                             borrowedTileIds.value = [];
                             advanceTurn();
                             broadcastGS();
