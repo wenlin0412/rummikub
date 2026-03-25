@@ -216,7 +216,25 @@
                                 class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 focus:border-orange outline-none font-bold text-dark transition-colors"
                             />
                         </div>
-
+                        <div class="mb-5">
+                            <label class="block text-sm font-bold text-light mb-1">摸牌/取牌 放入手牌位置</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button
+                                    @click="drawInsertSide = 'left'"
+                                    class="py-2 border-2 border-orange/30 rounded border-b-4 border-r-4 font-bold text-sm poly-btn"
+                                    :class="drawInsertSide === 'left' ? 'bg-orange text-white border-orange translate-x-[2px] translate-y-[2px] !border-b-2 !border-r-2' : 'bg-transparent text-light hover:bg-orange/10'"
+                                >
+                                    左側
+                                </button>
+                                <button
+                                    @click="drawInsertSide = 'right'"
+                                    class="py-2 border-2 border-orange/30 rounded border-b-4 border-r-4 font-bold text-sm poly-btn"
+                                    :class="drawInsertSide === 'right' ? 'bg-orange text-white border-orange translate-x-[2px] translate-y-[2px] !border-b-2 !border-r-2' : 'bg-transparent text-light hover:bg-orange/10'"
+                                >
+                                    右側
+                                </button>
+                            </div>
+                        </div>
                         <div class="flex gap-2 mb-4">
                             <button
                                 v-for="m in ['solo', 'host', 'join']"
@@ -225,11 +243,11 @@
                                 class="flex-1 py-2 border-2 border-orange/30 rounded border-b-4 border-r-4 font-bold text-sm poly-btn transition-colors"
                                 :class="mode === m ? 'bg-orange text-white border-orange translate-x-[2px] translate-y-[2px] !border-b-2 !border-r-2' : 'bg-transparent text-light hover:bg-orange/10'"
                             >
-                                {{ m === 'solo' ? '🤖 單人' : m === 'host' ? '建立房間' : '加入房間' }}
+                                {{ m === 'solo' ? '單人' : m === 'host' ? '建立房間' : '加入房間' }}
                             </button>
                         </div>
 
-                        <div v-if="mode === 'solo'" class="space-y-4 mb-5">
+                        <div v-if="mode === 'solo'" class="grid grid-cols-2 gap-3 mb-5">
                             <div>
                                 <label class="block text-sm font-bold text-light mb-1">AI 對手數量</label>
                                 <select v-model.number="aiCount" class="w-full p-3 bg-cream border-2 border-orange/30 rounded border-b-4 border-r-4 outline-none font-bold">
@@ -263,9 +281,14 @@
                         <button
                             @click="handleGo"
                             :disabled="isConnecting"
-                            class="w-full py-3 bg-gradient-to-r from-orange to-[#FF7B3E] text-white font-black text-lg rounded-lg border-b-4 border-r-4 border-[#cc6231] poly-btn active:border-b-0 active:border-r-0 disabled:opacity-50"
+                            class="w-full py-3 text-white font-black text-lg rounded-lg border-b-4 border-r-4 poly-btn active:border-b-0 active:border-r-0 disabled:opacity-50"
+                            :class="mode === 'solo' ? 'bg-green border-[#5ca366]' : 'bg-gradient-to-r from-orange to-[#FF7B3E] border-[#cc6231]'"
                         >
                             {{ isConnecting ? '連線中...' : (mode === 'solo' ? '開始單人遊戲' : mode === 'host' ? '建立房間' : '加入房間') }}
+                        </button>
+
+                        <button @click="showRules = true" class="w-full mt-3 py-2.5 bg-white text-orange border-2 border-orange/30 rounded-lg font-bold border-b-4 border-r-4 poly-btn">
+                            📖 先看規則
                         </button>
                     </template>
 
@@ -394,8 +417,8 @@
 
                 <!-- 輪到你提示橫幅 -->
                 <transition name="fade">
-                    <div v-if="isMyTurn && !isCurrentPlayerAI" class="flex justify-center items-center py-2 bg-green/15 border-t-2 border-green text-green font-bold text-sm shrink-0">
-                        <span class="animate-pulse mr-2 text-lg">🎯</span> 換你出牌了！
+                    <div v-if="isMyTurn && !isCurrentPlayerAI" class="flex justify-center items-center bg-green/15 border-green text-green font-bold text-xs shrink-0">
+                        <span class="animate-pulse mr-1 text-lg">🫵</span> 換你出牌了！
                     </div>
                 </transition>
 
@@ -563,113 +586,121 @@
             <!-- 規則 Modal -->
             <transition name="fade">
                 <div v-if="showRules" @click.self="showRules = false" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div class="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto border-2 border-orange/20 border-b-8 border-r-8 poly-shadow no-scrollbar">
-                        <div class="flex justify-between items-center mb-5 border-b-2 border-orange/20 pb-3 sticky top-0 bg-white z-10">
+                    <div class="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[85vh] border-2 border-orange/20 border-b-8 border-r-8 poly-shadow flex flex-col overflow-hidden">
+                        <div class="flex justify-between items-center border-b-2 border-orange/20 pb-3 shrink-0">
                             <h3 class="text-2xl font-black text-orange tracking-wider">📖 遊戲規則</h3>
                             <button @click="showRules = false" class="text-gray-400 hover:text-dark text-3xl font-black transition-colors">&times;</button>
                         </div>
 
-                        <div class="space-y-6 text-sm md:text-base font-bold text-dark leading-relaxed">
-                            <!-- 基礎規則 -->
-                            <div class="bg-cream p-4 rounded-xl border-2 border-orange/20 border-b-4 border-r-4">
-                                <p class="mb-2"><span class="text-orange text-lg">🎯</span> <b>獲勝目標</b>：最先將手牌全部出完的玩家獲勝。</p>
-                                <p class="mb-2"><span class="text-blue text-lg">🧊</span> <b>破冰行動</b>：首次出牌點數總和必須 <b>≥ 30 點</b>，且只能使用自己的手牌，不能接續桌面上的牌組。</p>
-                                <p><span class="text-green text-lg">🔄</span> <b>桌面重組</b>：破冰後，可隨意拆分、重組桌面上任何牌組。若回合結束時桌面有無效牌組，將會還原並<b>罰抽 3 張牌</b>。</p>
-                            </div>
+                        <div class="flex-1 overflow-y-auto no-scrollbar pr-1 mt-5">
+                            <div class="space-y-6 text-sm md:text-base font-bold text-dark leading-relaxed">
+                                <!-- 基礎規則 -->
+                                <div class="bg-cream p-4 rounded-xl border-2 border-orange/20 border-b-4 border-r-4">
+                                    <p class="mb-2"><span class="text-orange text-lg">🎯</span> <b>獲勝目標</b>：最先將手牌全部出完的玩家獲勝。</p>
+                                    <p class="mb-2"><span class="text-blue text-lg">🧊</span> <b>破冰行動</b>：首次出牌點數總和必須 <b>≥ 30 點</b>，且只能使用自己的手牌，不能接續桌面上的牌組。</p>
+                                    <p>
+                                        <span class="text-green text-lg">🔄</span> <b>桌面重組</b>：破冰後，可隨意拆分、重組桌面上任何牌組。若回合結束時桌面有無效牌組，將會還原並<b>罰抽 3 張牌</b>。
+                                    </p>
+                                </div>
 
-                            <!-- 牌組組合說明 -->
-                            <div>
-                                <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">📋</span> 合法牌組組合</h4>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <!-- 群組 -->
-                                    <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
-                                        <div class="font-black text-lg mb-1">群組 (Group)</div>
-                                        <p class="text-light text-sm mb-2">3 到 4 張<b>數字相同</b>但<b>顏色不同</b>的牌。</p>
-                                        <div class="bg-gray-100 p-2 rounded text-xs">
-                                            <span class="text-green font-black">✅ 合法：</span><span class="text-tred">紅7</span> + <span class="text-tblue">藍7</span> +
-                                            <span class="text-tblack">黑7</span>
+                                <!-- 牌組組合說明 -->
+                                <div>
+                                    <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">📋</span> 合法牌組組合</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <!-- 群組 -->
+                                        <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
+                                            <div class="font-black text-lg mb-1">群組 (Group)</div>
+                                            <p class="text-light text-sm mb-2">3 到 4 張<b>數字相同</b>但<b>顏色不同</b>的牌。</p>
+                                            <div class="bg-gray-100 p-2 rounded text-xs">
+                                                <span class="text-green font-black">✅ 合法：</span><span class="text-tred">紅7</span> + <span class="text-tblue">藍7</span> +
+                                                <span class="text-tblack">黑7</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <!-- 順組 -->
-                                    <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
-                                        <div class="font-black text-lg mb-1">順組 (Run)</div>
-                                        <p class="text-light text-sm mb-2">3 張以上<b>顏色相同</b>且<b>數字連續</b>的牌。</p>
-                                        <div class="bg-gray-100 p-2 rounded text-xs">
-                                            <span class="text-green font-black">✅ 合法：</span><span class="text-tblue">藍5</span> + <span class="text-tblue">藍6</span> +
-                                            <span class="text-tblue">藍7</span> + <span class="text-tblue">藍8</span>
+                                        <!-- 順組 -->
+                                        <div class="bg-white p-3 rounded-lg border-2 border-gray-200 border-b-4 border-r-4">
+                                            <div class="font-black text-lg mb-1">順組 (Run)</div>
+                                            <p class="text-light text-sm mb-2">3 張以上<b>顏色相同</b>且<b>數字連續</b>的牌。</p>
+                                            <div class="bg-gray-100 p-2 rounded text-xs">
+                                                <span class="text-green font-black">✅ 合法：</span><span class="text-tblue">藍5</span> + <span class="text-tblue">藍6</span> +
+                                                <span class="text-tblue">藍7</span> + <span class="text-tblue">藍8</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- 變臉版特殊鬼牌 -->
-                            <div>
-                                <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">🌀</span> 變臉版特殊鬼牌</h4>
-                                <p class="text-light mb-4">注意：所有鬼牌若在遊戲結束時留於手中，皆會<b>罰扣 30 點</b>。特殊鬼牌(藍/黑/黃)無法被手牌替換取回。</p>
+                                <!-- 變臉版特殊鬼牌 -->
+                                <div>
+                                    <h4 class="text-xl font-black text-dark mb-3 flex items-center gap-2"><span class="text-orange">🌀</span> 變臉版特殊鬼牌</h4>
+                                    <p class="text-light mb-4">注意：所有鬼牌若在遊戲結束時留於手中，皆會<b>罰扣 30 點</b>。特殊鬼牌(藍/黑/黃)無法被手牌替換取回。</p>
 
-                                <div class="space-y-4">
-                                    <!-- 普通百搭 -->
-                                    <div class="bg-red-50 p-4 rounded-xl border-2 border-red-200 border-b-4 border-r-4">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.joker"></div>
-                                            <h5 class="text-lg font-black text-tred">🔴 普通百搭 (紅) × 2</h5>
+                                    <div class="space-y-4">
+                                        <!-- 普通百搭 -->
+                                        <div class="bg-red-50 p-4 rounded-xl border-2 border-red-200 border-b-4 border-r-4">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.joker"></div>
+                                                <h5 class="text-lg font-black text-tred">🔴 普通百搭 (紅) × 2</h5>
+                                            </div>
+                                            <ul class="list-disc pl-5 space-y-1 text-sm">
+                                                <li>可替代任何數字與顏色的牌。</li>
+                                                <li><b>唯一可替換：</b>輪到你時，可用相對應的手牌將其替換取回。</li>
+                                                <li>取回的百搭牌必須在<b>同一回合</b>搭配至少 2 張手牌一起出掉，不能收回手牌中。</li>
+                                            </ul>
                                         </div>
-                                        <ul class="list-disc pl-5 space-y-1 text-sm">
-                                            <li>可替代任何數字與顏色的牌。</li>
-                                            <li><b>唯一可替換：</b>輪到你時，可用相對應的手牌將其替換取回。</li>
-                                            <li>取回的百搭牌必須在<b>同一回合</b>搭配至少 2 張手牌一起出掉，不能收回手牌中。</li>
-                                        </ul>
-                                    </div>
 
-                                    <!-- 雙人百搭 -->
-                                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200 border-b-4 border-r-4">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.double"></div>
-                                            <h5 class="text-lg font-black text-tblue">🔵 雙人百搭 (藍) × 2</h5>
+                                        <!-- 雙人百搭 -->
+                                        <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200 border-b-4 border-r-4">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.double"></div>
+                                                <h5 class="text-lg font-black text-tblue">🔵 雙人百搭 (藍) × 2</h5>
+                                            </div>
+                                            <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
+                                                <li><b>順組中：</b>代表 2 個同色<u class="underline-offset-2">連續</u>數字。</li>
+                                                <li><b>群組中：</b>可視作 2 張不同顏色的同數字牌（整組仍須合法）。</li>
+                                                <li><span class="text-tred">限制：</span>不能跳號填補缺口；不可放在 12 之後或 2 之前。破冰算 2 張牌的點數。</li>
+                                            </ul>
+                                            <div class="bg-white/70 p-2 rounded text-xs space-y-1">
+                                                <p><span class="text-green font-black">✅ 合法：</span>黑5 + 黑6 + [雙人] + 黑9 (雙人代表黑7與黑8)</p>
+                                                <p><span class="text-tred font-black">❌ 錯誤：</span>黑12 + [雙人] (超出數字13範圍)</p>
+                                            </div>
                                         </div>
-                                        <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
-                                            <li><b>順組中：</b>代表 2 個同色<u class="underline-offset-2">連續</u>數字。</li>
-                                            <li><b>群組中：</b>代表 2 個不同顏色的同數字牌。</li>
-                                            <li><span class="text-tred">限制：</span>不能跳號填補缺口；不可放在 12 之後或 2 之前。破冰算 2 張牌的點數。</li>
-                                        </ul>
-                                        <div class="bg-white/70 p-2 rounded text-xs space-y-1">
-                                            <p><span class="text-green font-black">✅ 合法：</span>黑5 + 黑6 + [雙人] + 黑9 (雙人代表黑7與黑8)</p>
-                                            <p><span class="text-tred font-black">❌ 錯誤：</span>黑12 + [雙人] (超出數字13範圍)</p>
-                                        </div>
-                                    </div>
 
-                                    <!-- 變色百搭 -->
-                                    <div class="bg-gray-100 p-4 rounded-xl border-2 border-gray-300 border-b-4 border-r-4">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.colorchange"></div>
-                                            <h5 class="text-lg font-black text-tblack">⬛ 變色百搭 (黑白) × 2</h5>
+                                        <!-- 變色百搭 -->
+                                        <div class="bg-gray-100 p-4 rounded-xl border-2 border-gray-300 border-b-4 border-r-4">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <div
+                                                    class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center"
+                                                    v-html="JOKER_SVGS.colorchange"
+                                                ></div>
+                                                <h5 class="text-lg font-black text-tblack">⬛ 變色百搭 (黑白) × 2</h5>
+                                            </div>
+                                            <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
+                                                <li><b>只能用於順組！</b></li>
+                                                <li>將順組強制分為兩段<u class="underline-offset-2">不同顏色</u>，百搭本身佔據一個數字位置。</li>
+                                                <li><span class="text-tred">限制：</span>目前玩法中需放在中間，前後都必須有牌且顏色不同。不可用於群組。</li>
+                                            </ul>
+                                            <div class="bg-white/70 p-2 rounded text-xs space-y-1">
+                                                <p><span class="text-green font-black">✅ 合法：</span>紅3 + 紅4 + [變色] + 藍6 + 藍7 (變色佔據數字5)</p>
+                                                <p><span class="text-tred font-black">❌ 錯誤：</span>紅3 + 紅4 + [變色] + 紅6 (前後顏色未改變)</p>
+                                            </div>
                                         </div>
-                                        <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
-                                            <li><b>只能用於順組！</b></li>
-                                            <li>將順組強制分為兩段<u class="underline-offset-2">不同顏色</u>，百搭本身佔據一個數字位置。</li>
-                                            <li><span class="text-tred">限制：</span>百搭前後的顏色必須不同。不可用於群組。</li>
-                                        </ul>
-                                        <div class="bg-white/70 p-2 rounded text-xs space-y-1">
-                                            <p><span class="text-green font-black">✅ 合法：</span>紅3 + 紅4 + [變色] + 藍6 + 藍7 (變色佔據數字5)</p>
-                                            <p><span class="text-tred font-black">❌ 錯誤：</span>紅3 + 紅4 + [變色] + 紅6 (前後顏色未改變)</p>
-                                        </div>
-                                    </div>
 
-                                    <!-- 鏡射百搭 -->
-                                    <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-300 border-b-4 border-r-4">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.mirror"></div>
-                                            <h5 class="text-lg font-black text-yellow-600">🟡 鏡射百搭 (黃) × 2</h5>
-                                        </div>
-                                        <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
-                                            <li>必須放在牌組的<u class="underline-offset-2">正中間</u>。</li>
-                                            <li><b>順組中：</b>左右數字必須對稱鏡像 (例如遞增再遞減)。</li>
-                                            <li><b>群組中：</b>左右顏色必須對稱鏡像。</li>
-                                            <li><span class="text-tred">限制：</span>破冰時點數算作 0 分。</li>
-                                        </ul>
-                                        <div class="bg-white/70 p-2 rounded text-xs space-y-1">
-                                            <p><span class="text-green font-black">✅ 合法順組：</span>紅3 + 紅4 + [鏡射] + 紅4 + 紅3</p>
-                                            <p><span class="text-green font-black">✅ 合法群組：</span>黑7 + 藍7 + [鏡射] + 藍7 + 黑7</p>
+                                        <!-- 鏡射百搭 -->
+                                        <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-300 border-b-4 border-r-4">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <div class="w-10 h-10 bg-white border-2 border-gray-200 rounded p-1 poly-shadow-sm flex items-center justify-center" v-html="JOKER_SVGS.mirror"></div>
+                                                <h5 class="text-lg font-black text-yellow-600">🟡 鏡射百搭 (黃) × 2</h5>
+                                            </div>
+                                            <ul class="list-disc pl-5 space-y-1 text-sm mb-2">
+                                                <li>必須放在牌組的<u class="underline-offset-2">正中間</u>。</li>
+                                                <li><b>順組中：</b>左右數字必須對稱鏡像 (例如遞增再遞減)。</li>
+                                                <li><b>群組中：</b>左右顏色必須對稱鏡像。</li>
+                                                <li><span class="text-tred">限制：</span>破冰時點數算作 0 分。</li>
+                                            </ul>
+                                            <div class="bg-white/70 p-2 rounded text-xs space-y-1">
+                                                <p><span class="text-green font-black">✅ 合法順組：</span>紅3 + 紅4 + [鏡射] + 紅4 + 紅3</p>
+                                                <p><span class="text-green font-black">✅ 合法群組：</span>黑7 + 藍7 + [鏡射] + 藍7 + 黑7</p>
+                                                <p><span class="text-green font-black">✅ 邊界可用：</span>紅1 + [鏡射] + 紅1、黃12 + [鏡射] + 黃12</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -678,9 +709,9 @@
 
                         <button
                             @click="showRules = false"
-                            class="w-full mt-6 py-4 bg-gradient-to-r from-orange to-[#FF7B3E] text-white text-lg font-black rounded-xl border-b-4 border-r-4 border-[#cc6231] poly-btn hover:shadow-lg sticky bottom-0"
+                            class="w-full mt-4 py-4 bg-gradient-to-r from-orange to-[#FF7B3E] text-white text-lg font-black rounded-xl border-b-4 border-r-4 border-[#cc6231] poly-btn hover:shadow-lg shrink-0"
                         >
-                            我準備好開始了！
+                            我瞭解規則了！
                         </button>
                     </div>
                 </div>
@@ -1051,12 +1082,14 @@
                         const roomCodeInput = ref("");
                         const aiCount = ref(2);
                         const aiDiff = ref("normal");
+                        const drawInsertSide = ref("right");
                         const avatars = ["🐱", "🐶", "🐰", "🐻", "🦊", "🐼", "🐨", "🦁"];
                         const selectedAvatar = ref(0);
                         const showRules = ref(false);
                         const toastMsg = ref("");
                         const aiThinking = ref(false);
                         const isConnecting = ref(false);
+                        const isPageActive = ref(!document.hidden && document.hasFocus());
 
                         let toastTimer = null;
                         const showToast = (msg, dur = 3000) => {
@@ -1441,15 +1474,22 @@
                             if (localHandOrder.value.length > 0 && h.length > 0) {
                                 const oldIds = new Set(localHandOrder.value);
                                 const newTiles = h.filter((t) => !oldIds.has(t.id));
+                                const mergedBase = localHandOrder.value.filter((id) => h.some((t) => t.id === id));
                                 if (newTiles.length > 0) {
                                     if (newTiles.length === 1 && !lastDrawnTileId.value) lastDrawnTileId.value = newTiles[0].id;
+                                    const newIds = newTiles.map((t) => t.id);
+                                    localHandOrder.value = drawInsertSide.value === "left" ? [...newIds, ...mergedBase] : [...mergedBase, ...newIds];
                                     nextTick(() => {
-                                        if (handContainer.value) handContainer.value.scrollLeft = handContainer.value.scrollWidth;
+                                        if (handContainer.value) {
+                                            if (drawInsertSide.value === "left") handContainer.value.scrollLeft = 0;
+                                            else handContainer.value.scrollLeft = handContainer.value.scrollWidth;
+                                        }
                                         if (newTiles.length === 1) setTimeout(() => (lastDrawnTileId.value = null), 2000);
                                     });
+                                } else {
+                                    localHandOrder.value = mergedBase;
                                 }
                                 localHand.value = h;
-                                localHandOrder.value = displayedHand.value.map((t) => t.id);
                             } else if (h.length > 0) {
                                 localHand.value = h;
                                 localHandOrder.value = h.map((t) => t.id);
@@ -1553,6 +1593,7 @@
                             turnTimeLeft.value = TURN_TIME;
                             if (turnTimerObj) clearInterval(turnTimerObj);
                             turnTimerObj = setInterval(() => {
+                                if (isSoloMode.value && !isPageActive.value) return;
                                 if (isCurrentPlayerAI.value) return;
                                 turnTimeLeft.value--;
                                 if (turnTimeLeft.value <= 0 && isHost.value) {
@@ -2031,6 +2072,15 @@
                             if (handContainer.value) handContainer.value.style.cursor = "";
                         };
 
+                        onMounted(() => {
+                            const syncPageActive = () => {
+                                isPageActive.value = !document.hidden && document.hasFocus();
+                            };
+                            window.addEventListener("focus", syncPageActive);
+                            window.addEventListener("blur", syncPageActive);
+                            document.addEventListener("visibilitychange", syncPageActive);
+                        });
+
                         return {
                             mode,
                             phase,
@@ -2038,6 +2088,7 @@
                             roomCodeInput,
                             aiCount,
                             aiDiff,
+                            drawInsertSide,
                             avatars,
                             selectedAvatar,
                             showRules,
