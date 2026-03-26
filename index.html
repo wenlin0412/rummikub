@@ -175,8 +175,18 @@
         <div id="app" class="w-full h-full min-h-screen">
             <!-- 全域提示框 (Toast) -->
             <transition name="fade">
-                <div v-if="toastMsg" class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-dark text-white px-6 py-3 rounded-lg font-bold z-[999] poly-shadow whitespace-nowrap">
-                    {{ toastMsg }}
+                <div
+                    v-if="toastMsg"
+                    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 backdrop-blur-md px-8 py-5 rounded-xl border-2 border-b-6 border-r-6 poly-shadow font-extrabold z-[1000] flex items-center gap-3 whitespace-nowrap"
+                    :class="{
+                        'border-blue text-blue': toastColor === 'blue',
+                        'border-orange text-orange': toastColor === 'orange',
+                        'border-green text-green': toastColor === 'green',
+                        'border-tred text-tred': toastColor === 'red',
+                        'border-yellow-500 text-yellow-600': toastColor === 'yellow',
+                    }"
+                >
+                    <span>{{ toastMsg }}</span>
                 </div>
             </transition>
 
@@ -357,12 +367,27 @@
                             <span v-html="ICON_SVGS.book" class="inline-block w-3.5 h-3.5"></span>規則
                         </button>
                         <button
+                            v-if="isSoloMode || isHost"
                             @click="headerAction"
-                            class="px-2 py-1 bg-white border-2 rounded font-bold text-xs poly-btn border-b-[3px] border-r-[3px]"
-                            :class="(!isSoloMode && !isHost) ? 'border-tred/30 text-tred hover:bg-tred/5' : 'border-green/30 text-green hover:bg-green/5'"
+                            class="px-2 py-1 bg-white border-2 rounded font-bold text-xs poly-btn border-b-[3px] border-r-[3px] border-green/30 text-green hover:bg-green/5"
                         >
-                            <template v-if="!isSoloMode && !isHost"><span v-html="ICON_SVGS.exit" class="inline-block w-3.5 h-3.5 align-[-0.1em] mr-0.5"></span>離開</template
-                            ><template v-else><span v-html="ICON_SVGS.refresh" class="inline-block w-3.5 h-3.5 align-[-0.1em] mr-0.5"></span>新局</template>
+                            <span v-html="ICON_SVGS.refresh" class="inline-block w-3.5 h-3.5 align-[-0.1em] mr-0.5"></span>新局
+                        </button>
+                        <button
+                            @click="leaveGame"
+                            class="p-1 px-1.5 bg-white border-2 border-tred/30 rounded font-bold text-xs text-tred hover:bg-tred/5 poly-btn border-b-[3px] border-r-[3px] flex items-center justify-center"
+                            title="離開遊戲"
+                        >
+                            <svg viewBox="0 0 20 20" class="w-4 h-4">
+                                <path
+                                    d="M7 4H5a2 2 0 00-2 2v8a2 2 0 002 2h2M11 14l4-4-4-4M15 10H7"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    fill="none"
+                                />
+                            </svg>
                         </button>
                         <div class="bg-yellow px-3 py-1 rounded font-black text-xs md:text-sm border-2 border-yellow border-b-[3px] border-r-[3px] poly-shadow-sm">牌堆: {{ poolCount }}</div>
                     </div>
@@ -417,10 +442,7 @@
                                     <span class="text-[8px] md:text-[10px] text-yellow-600 mt-0.5">鏡射</span></template
                                 >
                                 <template v-else>
-                                    <span :class="textColorClass(tile.color)" class="text-base md:text-xl leading-none mt-1">{{tile.number}}</span>
-                                    <span :class="textColorClass(tile.color)" class="text-[4px] md:text-[4px] tracking-[1px] md:tracking-[2px] mt-0.5 md:mt-1"
-                                        >{{ '●'.repeat(Math.min(tile.number,4)) }}</span
-                                    >
+                                    <span :class="textColorClass(tile.color)" class="text-base md:text-xl leading-none">{{tile.number}}</span>
                                 </template>
                                 <!-- 標記圖示 -->
                                 <span v-if="myPlayedTileIds.includes(tile.id)" class="absolute -top-1 md:-top-2 left-1/2 transform -translate-x-1/2 text-[8px] md:text-xs text-green drop-shadow-sm"
@@ -453,7 +475,7 @@
                 </div>
 
                 <!-- 操作區與手牌 -->
-                <div class="bg-white/95 backdrop-blur-md border-t-4 border-orange/20 p-2 md:p-3 shrink-0 flex flex-col gap-2 z-20">
+                <div class="bg-white/95 backdrop-blur-md border-t-4 border-orange/20 p-2 md:p-3 shrink-0 flex flex-col gap-1 z-20">
                     <!-- 控制按鈕列 -->
                     <div class="flex justify-between items-center gap-2 overflow-x-auto no-scrollbar">
                         <div class="flex gap-1.5 md:gap-2 whitespace-nowrap">
@@ -507,7 +529,7 @@
 
                     <!-- 手牌顯示區 -->
                     <div
-                        class="flex gap-1.5 md:gap-2 overflow-x-auto py-2 px-1 min-h-[70px] md:min-h-[85px] md:pb-3 items-center hand-area"
+                        class="flex gap-1.5 md:gap-2 overflow-x-auto px-1 min-h-[70px] md:min-h-[85px] items-center hand-area"
                         ref="handContainer"
                         @wheel.prevent="wheelHand"
                         @mousedown="handMouseDown"
@@ -544,10 +566,7 @@
                                 <span class="text-[8px] md:text-[10px] text-yellow-600 mt-0.5">鏡射</span></template
                             >
                             <template v-else>
-                                <span :class="textColorClass(tile.color)" class="text-xl md:text-2xl leading-none mt-1">{{tile.number}}</span>
-                                <span :class="textColorClass(tile.color)" class="text-[4px] md:text-[4px] tracking-[1px] md:tracking-[2px] mt-0.5 md:mt-1"
-                                    >{{ '●'.repeat(Math.min(tile.number,4)) }}</span
-                                >
+                                <span :class="textColorClass(tile.color)" class="text-xl md:text-2xl leading-none">{{tile.number}}</span>
                             </template>
 
                             <!-- 借用標記 -->
@@ -772,6 +791,19 @@
                         >
                             我瞭解規則了！
                         </button>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- 確認對話框 -->
+            <transition name="fade">
+                <div v-if="showConfirm" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60">
+                    <div class="bg-white rounded-2xl p-6 w-full max-w-sm border-2 border-orange/20 border-b-8 border-r-8 poly-shadow text-center">
+                        <p class="font-bold text-xl mb-6 text-dark">{{ confirmMsg }}</p>
+                        <div class="flex gap-4">
+                            <button @click="handleConfirm(false)" class="flex-1 py-3 rounded-xl font-bold border-2 border-gray-200 border-b-4 border-r-4 poly-btn bg-cream text-light">取消</button>
+                            <button @click="handleConfirm(true)" class="flex-1 py-3 rounded-xl font-bold border-2 border-tred border-b-4 border-r-4 poly-btn bg-tred text-white">確定</button>
+                        </div>
                     </div>
                 </div>
             </transition>
@@ -1175,18 +1207,34 @@
                         const avatars = Array.from({ length: AVATAR_SVGS.length }, (_, i) => i);
                         const selectedAvatar = ref(0);
                         const showRules = ref(false);
+                        const showConfirm = ref(false);
+                        const confirmMsg = ref("");
+                        const confirmCallback = ref(null);
                         const toastMsg = ref("");
+                        const toastColor = ref("blue");
                         const aiThinking = ref(false);
                         const isConnecting = ref(false);
                         const isPageActive = ref(!document.hidden && document.hasFocus());
 
                         let toastTimer = null;
-                        const showToast = (msg, dur = 3000) => {
+                        const showToast = (msg, color = "blue", dur = 1000) => {
                             toastMsg.value = msg;
+                            toastColor.value = color;
                             if (toastTimer) clearTimeout(toastTimer);
                             toastTimer = setTimeout(() => (toastMsg.value = ""), dur);
                         };
                         const avatarSvg = (idx) => AVATAR_SVGS[idx] || AVATAR_SVGS[0];
+
+                        const openConfirm = (msg, callback) => {
+                            confirmMsg.value = msg;
+                            confirmCallback.value = callback;
+                            showConfirm.value = true;
+                        };
+                        const handleConfirm = (ok) => {
+                            showConfirm.value = false;
+                            if (ok && confirmCallback.value) confirmCallback.value();
+                            confirmCallback.value = null;
+                        };
 
                         // Network & Auth
                         const myId = ref("");
@@ -1458,20 +1506,28 @@
                             myIndex.value = 0;
                             broadcastGS();
                             startTurnTimer();
-                            showToast("新的一局開始！");
+                            showToast("新的一局開始！", "green");
                             phase.value = "playing";
                         };
 
                         const headerAction = () => {
                             if (isSoloMode.value || isHost.value) {
-                                if (phase.value === "playing" && confirm("確定結束並開新局嗎？")) restartGame();
-                            } else {
-                                if (confirm("確定離開遊戲嗎？")) {
-                                    mqttSend({ type: "playerLeave", playerId: myId.value });
-                                    showToast("已離開");
-                                    setTimeout(() => location.reload(), 1500);
+                                if (phase.value === "playing") {
+                                    openConfirm("確定結束並開新局嗎？", () => restartGame());
                                 }
+                            } else {
+                                leaveGame();
                             }
+                        };
+
+                        const leaveGame = () => {
+                            openConfirm("確定離開遊戲嗎？", () => {
+                                if (!isSoloMode.value && mqttClient) {
+                                    mqttSend({ type: "playerLeave", playerId: myId.value });
+                                }
+                                showToast("已離開", "blue");
+                                setTimeout(() => location.reload(), 1500);
+                            });
                         };
 
                         // Data flow
@@ -1507,7 +1563,10 @@
                             const p = engine.players[pi];
                             if (p.isAI) return;
                             if (p.id === myId.value) {
-                                if (data.type === "toast") showToast(data.msg);
+                                if (data.type === "toast") {
+                                    const color = data.color || (data.msg.includes("撤銷") ? "red" : "blue");
+                                    showToast(data.msg, color);
+                                }
                             } else mqttSendDM(p.id, { ...data, targetId: p.id });
                         };
 
@@ -1645,8 +1704,10 @@
                             } else {
                                 if (data.type === "lobbyUpdate") players.value = data.players;
                                 else if (data.type === "gameState") updateLocalState(data.state);
-                                else if (data.type === "toast") showToast(data.msg);
-                                else if (data.type === "gameStart") {
+                                else if (data.type === "toast") {
+                                    const color = data.color || (data.msg.includes("撤銷") ? "red" : "blue");
+                                    showToast(data.msg, color);
+                                } else if (data.type === "gameStart") {
                                     myIndex.value = data.myIndex;
                                     phase.value = "playing";
                                     startTurnTimer();
@@ -1659,14 +1720,14 @@
                                     hasMeldedThisTurn.value = false;
                                     phase.value = "playing";
                                     startTurnTimer();
-                                    showToast("新的一局開始！");
+                                    showToast("新的一局開始！", "green");
                                 } else if (data.type === "gameOver") {
                                     phase.value = "finished";
                                     gameOverData.value = data;
                                     if (turnTimerObj) clearInterval(turnTimerObj);
                                 } else if (data.type === "hostLeft") {
                                     if (turnTimerObj) clearInterval(turnTimerObj);
-                                    showToast("房主已離開，即將返回主畫面...");
+                                    showToast("房主已離開，即將返回主畫面...", "blue");
                                     setTimeout(() => {
                                         if (mqttClient) mqttClient.end();
                                         location.reload();
@@ -1757,7 +1818,7 @@
                             if (!set || !set[ti]) return;
                             // 鏡射牌、雙人百搭、變色百搭均不可被替換，僅紅色百搭（joker）可換出
                             if (set[ti].color !== "joker") {
-                                sendTP(pi, { type: "toast", msg: "只有普通百搭（紅）可被替換" });
+                                sendTP(pi, { type: "toast", msg: "只有普通百搭（紅）可被替換", color: "orange" });
                                 return;
                             }
                             const ht = p.hand[hti],
@@ -1765,7 +1826,7 @@
                                 testSet = [...set];
                             testSet[ti] = ht;
                             if (!valSet(testSet)) {
-                                sendTP(pi, { type: "toast", msg: "無法替換" });
+                                sendTP(pi, { type: "toast", msg: "無法替換", color: "orange" });
                                 return;
                             }
                             set[ti] = ht;
@@ -1856,7 +1917,7 @@
                                 borrowedTileIds.value = [];
                             }
                             broadcastGS();
-                            sendTP(pi, { type: "toast", msg: "已撤銷" });
+                            sendTP(pi, { type: "toast", msg: "已撤銷", color: "red" });
                         };
 
                         const computeLastPlayedTiles = () => {
@@ -2069,7 +2130,7 @@
 
                         const playSelected = () => {
                             if (!selectedHandTiles.value.length) {
-                                showToast("請先選取牌");
+                                showToast("請先選取牌", "orange");
                                 return;
                             }
                             const ids = getSelectedIds();
@@ -2082,7 +2143,7 @@
                         };
                         const addToExistingSet = () => {
                             if (!selectedHandTiles.value.length || selectedTableSet.value < 0) {
-                                showToast("請選取手牌並點擊桌面牌組");
+                                showToast("請選取手牌並點擊桌面牌組", "orange");
                                 return;
                             }
                             const ids = getSelectedIds(),
@@ -2096,7 +2157,7 @@
                         };
                         const splitFromSet = () => {
                             if (!selectedTableTiles.value.length) {
-                                showToast("請點擊要取出的桌面牌");
+                                showToast("請點擊要取出的桌面牌", "orange");
                                 return;
                             }
                             const si = selectedTableTiles.value[0].si,
@@ -2110,7 +2171,7 @@
                         };
                         const replaceJoker = () => {
                             if (selectedHandTiles.value.length !== 1 || !selectedTableTiles.value.length) {
-                                showToast("請選 1 張手牌與桌面 1 張鬼牌");
+                                showToast("請選 1 張手牌與桌面 1 張鬼牌", "orange");
                                 return;
                             }
                             const jt = selectedTableTiles.value[0],
@@ -2195,7 +2256,11 @@
                             avatarSvg,
                             selectedAvatar,
                             showRules,
+                            showConfirm,
+                            confirmMsg,
+                            handleConfirm,
                             toastMsg,
+                            toastColor,
                             aiThinking,
                             isConnecting,
                             myId,
@@ -2217,6 +2282,8 @@
                             timerColor,
                             showTurnBanner,
                             showTimerBar,
+                            headerAction,
+                            leaveGame,
                             selectedHandTiles,
                             selectedTableTiles,
                             selectedTableSet,
