@@ -1794,7 +1794,6 @@
                             indices.sort((a, b) => b - a).forEach((i) => p.hand.splice(i, 1));
                             if (p.id === myId.value) hasMeldedThisTurn.value = true;
                             broadcastGS();
-                            if (p.hand.length === 0) endGameWithWinner(pi);
                         };
 
                         const processSplitTake = (pi, setIndex, pos) => {
@@ -1854,16 +1853,17 @@
                         const processEndTurn = (pi) => {
                             if (engine.currentTurn !== pi) return;
                             const isMe = engine.players[pi].id === myId.value;
+                            const p = engine.players[pi];
                             const hasMelded = isMe ? hasMeldedThisTurn.value : true; // AI always flags true if calling end
                             if (hasMelded) {
                                 if (isMe && borrowedTileIds.value.length > 0) {
-                                    const still = borrowedTileIds.value.filter((id) => engine.players[pi].hand.some((t) => t.id === id));
+                                    const still = borrowedTileIds.value.filter((id) => p.hand.some((t) => t.id === id));
                                     if (still.length > 0) {
                                         sendTP(pi, { type: "toast", msg: "取回的牌尚未歸還" });
                                         return;
                                     }
                                 }
-                                if (!engine.players[pi].hasBrokenIce) {
+                                if (!p.hasBrokenIce) {
                                     const oldIds = new Set();
                                     turnBackup.table.forEach((s) => s.forEach((t) => oldIds.add(t.id)));
                                     const nt = [];
@@ -1883,7 +1883,7 @@
                                             sendTP(pi, { type: "toast", msg: "破冰限用手牌" });
                                             return;
                                         }
-                                    engine.players[pi].hasBrokenIce = true;
+                                    p.hasBrokenIce = true;
                                 }
                                 autoSortTableSets(engine.table);
                                 if (!valAll(engine.table)) {
@@ -1892,6 +1892,11 @@
                                     return;
                                 }
                                 computeLastPlayedTiles();
+                                if (p.hand.length === 0) {
+                                    borrowedTileIds.value = [];
+                                    endGameWithWinner(pi);
+                                    return;
+                                }
                             }
                             autoSortTableSets(engine.table);
                             borrowedTileIds.value = [];
@@ -1979,18 +1984,10 @@
                                     aiThinking.value = false;
                                     if (engine.phase !== "playing" || engine.currentTurn !== pi) return;
                                     if (aiTryMeld(pi)) {
-                                        if (engine.players[pi].hand.length === 0) {
-                                            endGameWithWinner(pi);
-                                            return;
-                                        }
                                         if (aiDiff.value === "hard") {
                                             let ex = true;
                                             while (ex && engine.players[pi].hand.length > 0) {
                                                 ex = aiTryMeld(pi);
-                                                if (ex && engine.players[pi].hand.length === 0) {
-                                                    endGameWithWinner(pi);
-                                                    return;
-                                                }
                                             }
                                         }
                                         if (valAll(engine.table)) {
